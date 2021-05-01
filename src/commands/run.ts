@@ -111,11 +111,9 @@ Writing simulation data... done`,
       cli.action.stop()
       return response.body.handle
     } catch (error) {
-      if (error.response) {
-        this.debug(error.response.body)
-        this.error(error.message, {exit: 1})
-      }
-      this.error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. Are you sure this is a valid puzzle name?`, {exit: 1})
+      const message = error.response ? error.response.body.message : error.message
+      this.log()
+      this.error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. ${message}`, {exit: 1})
     }
   }
 
