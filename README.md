@@ -29,28 +29,40 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
-* [`cg hello [FILE]`](#cg-hello-file)
+* [`cg run [COUNT]`](#cg-run-file)
 * [`cg help [COMMAND]`](#cg-help-command)
 
-## `cg hello [FILE]`
+## `cg run [COUNT]`
 
-describe the command here
+run test session playouts between two bots
 
 ```
 USAGE
-  $ cg hello [FILE]
+  $ cg run [COUNT]
 
 OPTIONS
-  -f, --force
-  -h, --help       show CLI help
-  -n, --name=name  name to print
+  -c, --code=code      path to your bot source code
+  -h, --help           show CLI help
+  -l, --language=C#    programming language of your bot source code
+  -o, --output         whether or not to output simulation data to file
+  -p, --puzzle=puzzle  name of puzzle or contest used by CodinGame API
+  --agent1=agent1      id of agent 1
+  --agent2=agent2      id of agent 2
+  --config=config      [default: ./cgconfig.json] path to config file
+  --outdir=outdir      [default: ./cg-out] directory in which to place the output data from simulation runs, created if doesn't exist
 
 EXAMPLE
-  $ cg hello
-  hello world from ./src/hello.ts!
+  $ cg run 10 -o
+  Reading config file... done
+  Validating inputs... done
+  Fetching test session id from CodinGame... done
+  Grabbing source code... done
+  Running simulations...
+   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of Error: 32%
+  Writing simulation data... done
 ```
 
-_See code: [src/commands/hello.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.0.0/src/commands/hello.ts)_
+_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.0.0/src/commands/run.ts)_
 
 ## `cg help [COMMAND]`
 

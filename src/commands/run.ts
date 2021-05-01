@@ -7,7 +7,14 @@ export class Run extends Command {
   static description = 'run test session playouts between two bots'
 
   static examples = [
-    '$ cg run 10',
+    `$ cg run 10 -o
+Reading config file... done
+Validating inputs... done
+Fetching test session id from CodinGame... done
+Grabbing source code... done
+Running simulations...
+ ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of Error: 32%
+Writing simulation data... done`,
   ]
 
   static flags = {
@@ -18,7 +25,7 @@ export class Run extends Command {
     config: flags.string({description: 'path to config file', default: './cgconfig.json'}),
     language: flags.string({char: 'l', description: 'programming language of your bot source code', options: ['C#']}),
     outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', default: './cg-out'}),
-    output: flags.boolean({char: 'o', description: 'wheter or not to output simulation data to file', default: false}),
+    output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),
   }
 
