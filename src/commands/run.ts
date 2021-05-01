@@ -2,7 +2,9 @@ import {Command, flags} from '@oclif/command'
 import cli from 'cli-ux'
 import {outputJson, pathExists, readFile, readJson} from 'fs-extra'
 import got from 'got/dist/source'
+import * as notifier from 'node-notifier'
 import {resolve} from 'path'
+
 export class Run extends Command {
   static description = 'run test session playouts between two bots'
 
@@ -49,7 +51,9 @@ Writing simulation data... done`,
 
     const payload: TestSessionPayload = {cookie: config.cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
     const gameDataIterator = this.generateGameData(payload, args.count)
-    this.processGameData(gameDataIterator, flags.output, outdir)
+    await this.processGameData(gameDataIterator, flags.output, outdir)
+
+    notifier.notify({title: 'cg-cli', message: 'Your command has finished running.'})
   }
 
   private async getConfig(configPath: string) {
