@@ -72,6 +72,18 @@ Writing simulation data... done`,
       this.error(`The count argument must be bigger than 0 and it was ${args.count}`, {exit: 1})
     }
 
+    if (!config.cookie) {
+      this.error('No cookie was specified. Please add \'cookie\' property to config file', {exit: 1})
+    }
+
+    if (!config.cookie.includes('rememberMe=')) {
+      this.error(`Cookie '${config.cookie}' is invalid. Cookie must start with 'rememberMe=`, {exit: 1})
+    }
+
+    if (!config.userId) {
+      this.error('No user id was specified. Please add \'userId\' property to config file', {exit: 1})
+    }
+
     if (!flags.language && !config.programmingLanguageId) {
       this.error('No programming language was specified. Please add \'programmingLanguageId\' property to config file or use --language flag.', {exit: 1})
     }
