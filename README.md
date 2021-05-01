@@ -20,7 +20,7 @@ $ npm install -g @snowfrog/cg-cli
 $ cg COMMAND
 running command...
 $ cg (-v|--version|version)
-@snowfrog/cg-cli/0.1.2 win32-x64 node-v14.16.1
+@snowfrog/cg-cli/0.1.3 win32-x64 node-v14.16.1
 $ cg --help [COMMAND]
 USAGE
   $ cg COMMAND
@@ -86,7 +86,7 @@ OPTIONS
   -h, --help  show CLI help
 ```
 
-_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.1.2/src/commands/init.ts)_
+_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.1.3/src/commands/init.ts)_
 
 ## `cg run [COUNT]`
 
@@ -108,9 +108,7 @@ OPTIONS
   --agent1=agent1      id of agent 1
   --agent2=agent2      id of agent 2
   --config=config      [default: ./cgconfig.json] path to config file
-
-  --outdir=outdir      [default: ./cg-out] directory in which to place the output data from simulation runs, created if
-                       doesn't exist
+  --outdir=outdir      directory in which to place the output data from simulation runs, created if doesn't exist
 
 EXAMPLE
   $ cg run 10 -o
@@ -124,5 +122,5 @@ EXAMPLE
   Writing simulation data... done
 ```
 
-_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.1.2/src/commands/run.ts)_
+_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.1.3/src/commands/run.ts)_
 <!-- commandsstop -->
