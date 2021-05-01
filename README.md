@@ -29,40 +29,33 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
-* [`cg run [COUNT]`](#cg-run-file)
+* [`cg autocomplete [SHELL]`](#cg-autocomplete-shell)
 * [`cg help [COMMAND]`](#cg-help-command)
+* [`cg init`](#cg-init)
+* [`cg run [COUNT]`](#cg-run-count)
 
-## `cg run [COUNT]`
+## `cg autocomplete [SHELL]`
 
-run test session playouts between two bots
+display autocomplete installation instructions
 
 ```
 USAGE
-  $ cg run [COUNT]
+  $ cg autocomplete [SHELL]
+
+ARGUMENTS
+  SHELL  shell type
 
 OPTIONS
-  -c, --code=code      path to your bot source code
-  -h, --help           show CLI help
-  -l, --language=C#    programming language of your bot source code
-  -o, --output         whether or not to output simulation data to file
-  -p, --puzzle=puzzle  name of puzzle or contest used by CodinGame API
-  --agent1=agent1      id of agent 1
-  --agent2=agent2      id of agent 2
-  --config=config      [default: ./cgconfig.json] path to config file
-  --outdir=outdir      [default: ./cg-out] directory in which to place the output data from simulation runs, created if doesn't exist
+  -r, --refresh-cache  Refresh cache (ignores displaying instructions)
 
-EXAMPLE
-  $ cg run 10 -o
-  Reading config file... done
-  Validating inputs... done
-  Fetching test session id from CodinGame... done
-  Grabbing source code... done
-  Running simulations...
-   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of Error: 32%
-  Writing simulation data... done
+EXAMPLES
+  $ cg autocomplete
+  $ cg autocomplete bash
+  $ cg autocomplete zsh
+  $ cg autocomplete --refresh-cache
 ```
 
-_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.0.0/src/commands/run.ts)_
+_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v0.3.0/src/commands/autocomplete/index.ts)_
 
 ## `cg help [COMMAND]`
 
@@ -80,4 +73,56 @@ OPTIONS
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v3.2.2/src/commands/help.ts)_
+
+## `cg init`
+
+initializes a CodinGame project by adding a cgconfig.json file
+
+```
+USAGE
+  $ cg init
+
+OPTIONS
+  -h, --help  show CLI help
+```
+
+_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.0.0/src/commands/init.ts)_
+
+## `cg run [COUNT]`
+
+run test session playouts between two bots
+
+```
+USAGE
+  $ cg run [COUNT]
+
+ARGUMENTS
+  COUNT  [default: 1] the number of simulations to run on the server. Must be bigger than 0
+
+OPTIONS
+  -c, --code=code      path to your bot source code
+  -h, --help           show CLI help
+  -l, --language=C#    programming language of your bot source code
+  -o, --output         whether or not to output simulation data to file
+  -p, --puzzle=puzzle  name of puzzle or contest used by CodinGame API
+  --agent1=agent1      id of agent 1
+  --agent2=agent2      id of agent 2
+  --config=config      [default: ./cgconfig.json] path to config file
+
+  --outdir=outdir      [default: ./cg-out] directory in which to place the output data from simulation runs, created if
+                       doesn't exist
+
+EXAMPLE
+  $ cg run 10 -o
+  Reading config file... done
+  Validating inputs... done
+  Fetching test session id from CodinGame... done
+  Grabbing source code... done
+  Running simulations...
+    ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of 
+  Error: 32%
+  Writing simulation data... done
+```
+
+_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.0.0/src/commands/run.ts)_
 <!-- commandsstop -->
