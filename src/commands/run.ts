@@ -26,7 +26,7 @@ Writing simulation data... done`,
     code: flags.string({char: 'c', description: 'path to your bot source code'}),
     config: flags.string({description: 'path to config file', default: './cgconfig.json'}),
     language: flags.string({char: 'l', description: 'programming language of your bot source code', options: ['C#']}),
-    outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', default: './cg-out', dependsOn: ['output']}),
+    outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),
   }
@@ -39,7 +39,7 @@ Writing simulation data... done`,
     const config = await this.getConfig(flags.config)
 
     this.validateInputs(flags, config, args)
-    const outdir = resolve(flags.outdir ?? config.outputDir)
+    const outdir = resolve(flags.outdir ?? config.outputDir ?? './cg-out')
     const puzzleName = flags.puzzle ?? config.puzzleName!
     const codePath = flags.code ?? config.codePath!
     const programmingLanguageId = flags.language ?? config.programmingLanguageId!
@@ -102,10 +102,6 @@ Writing simulation data... done`,
 
     if (!flags.code && !config.codePath) {
       this.error('No code path was specified. Please add \'codePath\' property to config file or use --code flag.', {exit: 1})
-    }
-
-    if (flags.output && !flags.outdir && !config.outputDir) {
-      this.error('The output flag has been set to true but no output directory was specified. Please add \'outputDir\' property to config file or use --outdir flag.', {exit: 1})
     }
     cli.action.stop()
   }
@@ -236,7 +232,7 @@ interface RunCommandFlags {
     code: string | undefined;
     config: string;
     language: string | undefined;
-    outdir: string;
+    outdir: string | undefined;
     output: boolean;
     puzzle: string | undefined;
 }
