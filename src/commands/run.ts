@@ -26,7 +26,7 @@ Writing simulation data... done`,
     code: flags.string({char: 'c', description: 'path to your bot source code'}),
     config: flags.string({description: 'path to config file', default: './cgconfig.json'}),
     language: flags.string({char: 'l', description: 'programming language of your bot source code', options: ['C#']}),
-    outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', default: './cg-out'}),
+    outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', default: './cg-out', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),
   }
