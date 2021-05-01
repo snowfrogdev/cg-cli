@@ -4,10 +4,10 @@ import {outputJson, pathExists, readFile, readJson} from 'fs-extra'
 import got from 'got/dist/source'
 import {resolve} from 'path'
 export class Run extends Command {
-  static description = 'describe the command here'
+  static description = 'run test session playouts between two bots'
 
   static examples = [
-    '$ cg run',
+    '$ cg run 10',
   ]
 
   static flags = {
@@ -25,14 +25,41 @@ export class Run extends Command {
   static args = [{name: 'count', description: 'the number of simulations to run on the server. Must be bigger than 0', default: 1}]
 
   async run() {
-    const {args, flags} = this.parse(Run)
+    const {args, flags}: { args: RunCommandArgs; flags: RunCommandFlags} = this.parse(Run)
 
+    const config = await this.getConfig(flags.config)
+
+    this.validateInputs(flags, config, args)
+    const outdir = resolve(flags.outdir ?? config.outputDir)
+    const puzzleName = flags.puzzle ?? config.puzzleName!
+    const codePath = flags.code ?? config.codePath!
+    const programmingLanguageId = flags.language ?? config.programmingLanguageId!
+    const agent1Id = Number(flags.agent1) || config.agent1!
+    const agent2Id = Number(flags.agent2) || config.agent2!
+
+    const testSessionId = await this.getSessionId(config.cookie, config.userId, puzzleName)
+    const code = await this.getCode(codePath)
+
+    const payload: TestSessionPayload = {cookie: config.cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
+    const gameDataIterator = this.generateGameData(payload, args.count)
+    this.processGameData(gameDataIterator, flags.output, outdir)
+  }
+
+  private async getConfig(configPath: string) {
     cli.action.start('Reading config file')
-    if (!await pathExists(resolve(flags.config))) {
-      this.error(`Could not find valid config file at ${resolve(flags.config)}`, {exit: 1})
+    if (!await pathExists(resolve(configPath))) {
+      this.error(`Could not find valid config file at ${resolve(configPath)}`, {exit: 1})
     }
-    const config = await readJson(resolve(flags.config)) as CGConfig
+    const config = await readJson(resolve(configPath)) as CGConfig
     cli.action.stop()
+    return config
+  }
+
+  private validateInputs(flags: RunCommandFlags, config: CGConfig, args: RunCommandArgs) {
+    cli.action.start('Validating inputs')
+    if (args.count < 1) {
+      this.error(`The count argument must be bigger than 0 and it was ${args.count}`, {exit: 1})
+    }
 
     if (!flags.language && !config.programmingLanguageId) {
       this.error('No programming language was specified. Please add \'programmingLanguageId\' property to config file or use --language flag.', {exit: 1})
@@ -46,10 +73,6 @@ export class Run extends Command {
       this.error('No id for agent 2 was specified. Please add \'agent1\' property to config file or use --agent1 flag.', {exit: 1})
     }
 
-    if (args.count < 1) {
-      this.error(`The count argument must be bigger than 0 and it was ${args.count}`, {exit: 1})
-    }
-
     if (!flags.puzzle && !config.puzzleName) {
       this.error('No puzzle name was specified. Please add \'puzzleName\' property to config file or use --puzzle flag.', {exit: 1})
     }
@@ -61,49 +84,53 @@ export class Run extends Command {
     if (flags.output && !flags.outdir && !config.outputDir) {
       this.error('The output flag has been set to true but no output directory was specified. Please add \'outputDir\' property to config file or use --outdir flag.', {exit: 1})
     }
+    cli.action.stop()
+  }
 
-    const outdir = resolve(flags.outdir ?? config.outputDir)
-
+  private async getSessionId(cookie: string, userId: number, puzzleName: string): Promise<string> {
     cli.action.start('Fetching test session id from CodinGame')
-    const testSessionId = await this.getSessionId(config.cookie, config.userId, flags.puzzle ?? config.puzzleName!)
-    cli.action.stop()
+    try {
+      const response = await got.post<{ reportReady: boolean; handle: string; direct: boolean }>('https://www.codingame.com/services/Puzzle/generateSessionFromPuzzlePrettyId', {
+        headers: {
+          cookie,
+        },
+        json: [userId, puzzleName, false],
+        responseType: 'json',
+      })
+      cli.action.stop()
+      return response.body.handle
+    } catch (error) {
+      if (error.response) {
+        this.debug(error.response.body)
+        this.error(error.message, {exit: 1})
+      }
+      this.error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. Are you sure this is a valid puzzle name?`, {exit: 1})
+    }
+  }
 
+  private async getCode(codePath: string) {
     cli.action.start('Grabbing source code')
-    const code = (await readFile(resolve(flags.code ?? config.codePath!), 'utf8')).trim()
+    const code = (await readFile(resolve(codePath), 'utf8')).trim()
     cli.action.stop()
+    return code
+  }
 
+  private async * generateGameData(payload: TestSessionPayload, count: number) {
+    this.log('Running simulations...')
     const progress = cli.progress({
       format: ' {bar}\u25A0 ETA: {eta}s | {value}/{total} | Agent1: {agent1Wins} wins ({agent1Percentage}) | Agent2: {agent2Wins} wins ({agent2Percentage}) | Margin of Error: {marginOfError}',
       barCompleteChar: '\u25A0',
-      barIncompleteChar: ' '})
+      barIncompleteChar: ' ',
+    })
+    progress.start(count, 0, {agent1Wins: 0, agent2Wins: 0, agent1Percentage: 'N/A', agent2Percentage: 'N/A', marginOfError: 'N/A'})
 
+    const percentage = new Intl.NumberFormat('en-US', {style: 'percent'})
     let agent1Wins = 0
     let agent2Wins = 0
 
-    const percentage = new Intl.NumberFormat('en-US', {style: 'percent'})
-
-    const payload: TestSessionPayload = {
-      cookie: config.cookie, testSessionId,
-      code,
-      programmingLanguageId: flags.language ?? config.programmingLanguageId!,
-      agent1Id: Number(flags.agent1) || config.agent1!,
-      agent2Id: Number(flags.agent2) || config.agent2!,
-    }
-
-    const writeOperations: Promise<void>[] = []
-    const date = new Date()
-    const dateStamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}${date.getMinutes()}${date.getSeconds()}`
-
-    this.log('Running simulations...')
-    progress.start(args.count, 0, {agent1Wins: 0, agent2Wins: 0, agent1Percentage: 'N/A', agent2Percentage: 'N/A', marginOfError: 'N/A'})
-    for (let i = 0; i < args.count; i++) {
+    for (let i = 0; i < count; i++) {
       progress.update(i)
-      const response: CGResponse = await this.runSimulations(payload) // eslint-disable-line no-await-in-loop
-
-      if (flags.output) {
-        const path = outdir + `/${dateStamp}-${i + 1}.json`
-        writeOperations.push(outputJson(path, response))
-      }
+      const response: TestSessionPlayData = await this.getTestSessionPlayData(payload) // eslint-disable-line no-await-in-loop
 
       // 2 = win, 1 = loss, 0 = DNF
       agent1Wins += Math.max(response.scores[0] - 1, 0)
@@ -121,40 +148,17 @@ export class Run extends Command {
         agent2Percentage: percentage.format(agent2Percentage),
         marginOfError: percentage.format(marginOfError),
       })
+
+      yield response
     }
 
     progress.increment(1)
     progress.stop()
-
-    if (writeOperations.length > 0) {
-      cli.action.start('Writing simulation data')
-      await Promise.all(writeOperations)
-      cli.action.stop()
-    }
   }
 
-  private async getSessionId(cookie: string, userId: number, puzzleName: string): Promise<string> {
+  private async getTestSessionPlayData(payload: TestSessionPayload): Promise<TestSessionPlayData> {
     try {
-      const response = await got.post<{ reportReady: boolean; handle: string; direct: boolean }>('https://www.codingame.com/services/Puzzle/generateSessionFromPuzzlePrettyId', {
-        headers: {
-          cookie,
-        },
-        json: [userId, puzzleName, false],
-        responseType: 'json',
-      })
-      return response.body.handle
-    } catch (error) {
-      if (error.response) {
-        this.debug(error.response.body)
-        this.error(error.message, {exit: 1})
-      }
-      this.error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. Are you sure this is a valid puzzle name?`, {exit: 1})
-    }
-  }
-
-  private async runSimulations(payload: TestSessionPayload): Promise<CGResponse> {
-    try {
-      const response = await got.post<CGResponse>('https://www.codingame.com/services/TestSession/play', {
+      const response = await got.post<TestSessionPlayData>('https://www.codingame.com/services/TestSession/play', {
         headers: {
           cookie: payload.cookie,
         },
@@ -178,6 +182,42 @@ export class Run extends Command {
       this.error(`There was a problem running your simulations. ${message}`, {exit: 1})
     }
   }
+
+  private async processGameData(gameDataIterator: AsyncGenerator<TestSessionPlayData, void, unknown>, output: boolean, outdir: string) {
+    const writeOperations: Promise<void>[] = []
+    const date = new Date()
+    const dateStamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}${date.getMinutes()}${date.getSeconds()}`
+    let i = 1
+    for await (const gameData of gameDataIterator) {
+      if (output) {
+        const path = outdir + `/${dateStamp}-${i}.json`
+        writeOperations.push(outputJson(path, gameData))
+      }
+      i++
+    }
+
+    if (writeOperations.length > 0) {
+      cli.action.start('Writing simulation data')
+      await Promise.all(writeOperations)
+      cli.action.stop()
+    }
+  }
+}
+
+interface RunCommandArgs {
+  count: number;
+}
+
+interface RunCommandFlags {
+    help: void;
+    agent1: string | undefined;
+    agent2: string | undefined;
+    code: string | undefined;
+    config: string;
+    language: string | undefined;
+    outdir: string;
+    output: boolean;
+    puzzle: string | undefined;
 }
 
 interface CGConfig {
@@ -191,7 +231,7 @@ interface CGConfig {
   outputDir?: string;
 }
 
-interface CGResponse {
+interface TestSessionPlayData {
   frames: FrameData[];
   gameId: number;
   refereeInput: string;
