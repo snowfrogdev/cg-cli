@@ -48,7 +48,7 @@ export default class Init extends Command {
       },
     ])
 
-    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId, codePath}
+    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId, codePath, agent1: -1, agent2: -2}
 
     this.saveConfig(config)
 

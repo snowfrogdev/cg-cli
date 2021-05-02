@@ -22,14 +22,15 @@ Writing simulation data... done`,
 
   static flags = {
     help: flags.help({char: 'h'}),
-    agent1: flags.string({description: 'id of agent 1'}),
-    agent2: flags.string({description: 'id of agent 2'}),
+    agent1: flags.string({description: 'id of agent 1, a value of -1 means your own code, a value of -2 means the boss for the league'}),
+    agent2: flags.string({description: 'id of agent 2, a value of -1 means your own code, a value of -2 means the boss for the league'}),
     code: flags.string({char: 'c', description: 'path to your bot source code'}),
     config: flags.string({description: 'path to config file', default: './cgconfig.json'}),
     language: flags.string({char: 'l', description: 'programming language of your bot source code', options: ['C#']}),
     outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),
+    top10: flags.string({description: 'play your code once against the top 10 bots in the league'}),
   }
 
   static args = [{name: 'count', description: 'the number of simulations to run on the server. Must be bigger than 0', default: 1}]
@@ -48,7 +49,7 @@ Writing simulation data... done`,
     const agent1Id = Number(flags.agent1) || config.agent1!
     const agent2Id = Number(flags.agent2) || config.agent2!
 
-    const testSessionId = await this.getSessionId(cookie, config.userId, puzzleName)
+    const testSessionId = await this.getSessionId(cookie, config.userId!, puzzleName)
     const code = await this.getCode(codePath)
 
     const payload: TestSessionPayload = {cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
