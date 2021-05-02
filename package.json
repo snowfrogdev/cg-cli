@@ -1,7 +1,7 @@
 {
   "name": "@snowfrog/cg-cli",
   "description": "A CLI for all your CodinGame needs",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "Philippe Vaillancourt @snowfrogdev",
   "bin": {
     "cg": "./bin/run"
