@@ -125,9 +125,13 @@ Writing simulation data... done`,
 
   private async getCode(codePath: string) {
     cli.action.start('Grabbing source code')
-    const code = (await readFile(resolve(codePath), 'utf8')).trim()
-    cli.action.stop()
-    return code
+    try {
+      const code = (await readFile(resolve(codePath), 'utf8')).trim()
+      cli.action.stop()
+      return code
+    } catch (error) {
+      this.error(`There was a problem trying to read your code from ${codePath}. ${error.message}`, {exit: 1})
+    }
   }
 
   private async * generateGameData(payload: TestSessionPayload, count: number) {

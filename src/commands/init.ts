@@ -29,7 +29,7 @@ export default class Init extends Command {
 
     const contestChoices = await this.getContests(`rememberMe=${cookie}`, userId)
 
-    const {puzzleName, programmingLanguageId} = await inquirer.prompt<{ puzzleName: string; programmingLanguageId: string}>([
+    const {puzzleName, programmingLanguageId, codePath} = await inquirer.prompt<{ puzzleName: string; programmingLanguageId: string; codePath: string}>([
       {
         name: 'puzzleName',
         message: 'What puzzle are you working on',
@@ -45,14 +45,12 @@ export default class Init extends Command {
         pageSize: 7,
       },
       {
-        name: 'programmingLanguageId',
-        message: 'What language will you be submitting to CodinGame',
-        choices: programmingLanguageChoices,
-        pageSize: 7,
+        name: 'codePath',
+        message: 'What is the relative path of the code you\'ll be submitting to CodinGame',
       },
     ])
 
-    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId}
+    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId, codePath}
 
     this.saveConfig(config)
 
