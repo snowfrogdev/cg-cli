@@ -4,6 +4,7 @@ import {outputJson} from 'fs-extra'
 import got from 'got'
 import * as inquirer from 'inquirer'
 import {CGConfig} from '../abstractions/cgconfig'
+import {programmingLanguageChoices} from '../constants/programming-language-choices'
 
 export default class Init extends Command {
   static description = 'initializes a CodinGame project by adding a cgconfig.json file'
@@ -28,7 +29,7 @@ export default class Init extends Command {
 
     const contestChoices = await this.getContests(`rememberMe=${cookie}`, userId)
 
-    const {puzzleName} = await inquirer.prompt<{ puzzleName: string }>([
+    const {puzzleName, programmingLanguageId} = await inquirer.prompt<{ puzzleName: string; programmingLanguageId: string}>([
       {
         name: 'puzzleName',
         message: 'What puzzle are you working on',
@@ -36,9 +37,22 @@ export default class Init extends Command {
         choices: contestChoices,
         pageSize: 7,
       },
+      {
+        name: 'programmingLanguageId',
+        message: 'What language will you be submitting to CodinGame',
+        type: 'list',
+        choices: programmingLanguageChoices,
+        pageSize: 7,
+      },
+      {
+        name: 'programmingLanguageId',
+        message: 'What language will you be submitting to CodinGame',
+        choices: programmingLanguageChoices,
+        pageSize: 7,
+      },
     ])
 
-    const config: CGConfig = {cookie, userId, puzzleName}
+    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId}
 
     this.saveConfig(config)
 
