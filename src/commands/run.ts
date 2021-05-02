@@ -151,9 +151,8 @@ Writing simulation data... done`,
       progress.update(i)
       const response: TestSessionPlayData = await this.getTestSessionPlayData(payload) // eslint-disable-line no-await-in-loop
 
-      // 2 = win, 1 = loss, 0 = DNF
-      agent1Wins += Math.max(response.scores[0] - 1, 0)
-      agent2Wins += Math.max(response.scores[1] - 1, 0)
+      agent1Wins += response.ranks[0] === 0 ? 1 : 0
+      agent2Wins += response.ranks[0] === 1 ? 1 : 0
 
       const agent1Percentage = agent1Wins / (i + 1)
       const agent2Percentage = agent2Wins / (i + 1)
