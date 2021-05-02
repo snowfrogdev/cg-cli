@@ -1,9 +1,10 @@
 import {Command, flags} from '@oclif/command'
 import cli from 'cli-ux'
 import {outputJson, pathExists, readFile, readJson} from 'fs-extra'
-import got from 'got/dist/source'
+import got from 'got'
 import * as notifier from 'node-notifier'
 import {resolve} from 'path'
+import {CGConfig} from '../abstractions/cgconfig'
 
 export class Run extends Command {
   static description = 'run test session playouts between two bots'
@@ -39,6 +40,7 @@ Writing simulation data... done`,
     const config = await this.getConfig(flags.config)
 
     this.validateInputs(flags, config, args)
+    const cookie = `rememberMe=${config.cookie}`
     const outdir = resolve(flags.outdir ?? config.outputDir ?? './cg-out')
     const puzzleName = flags.puzzle ?? config.puzzleName!
     const codePath = flags.code ?? config.codePath!
@@ -46,10 +48,10 @@ Writing simulation data... done`,
     const agent1Id = Number(flags.agent1) || config.agent1!
     const agent2Id = Number(flags.agent2) || config.agent2!
 
-    const testSessionId = await this.getSessionId(config.cookie, config.userId, puzzleName)
+    const testSessionId = await this.getSessionId(cookie, config.userId, puzzleName)
     const code = await this.getCode(codePath)
 
-    const payload: TestSessionPayload = {cookie: config.cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
+    const payload: TestSessionPayload = {cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
     const gameDataIterator = this.generateGameData(payload, args.count)
     await this.processGameData(gameDataIterator, flags.output, outdir)
 
@@ -76,10 +78,6 @@ Writing simulation data... done`,
       this.error('No cookie was specified. Please add \'cookie\' property to config file', {exit: 1})
     }
 
-    if (!config.cookie.includes('rememberMe=')) {
-      this.error(`Cookie '${config.cookie}' is invalid. Cookie must start with 'rememberMe=`, {exit: 1})
-    }
-
     if (!config.userId) {
       this.error('No user id was specified. Please add \'userId\' property to config file', {exit: 1})
     }
@@ -93,7 +91,7 @@ Writing simulation data... done`,
     }
 
     if (!flags.agent2 && !config.agent2) {
-      this.error('No id for agent 2 was specified. Please add \'agent1\' property to config file or use --agent1 flag.', {exit: 1})
+      this.error('No id for agent 2 was specified. Please add \'agent2\' property to config file or use --agent2 flag.', {exit: 1})
     }
 
     if (!flags.puzzle && !config.puzzleName) {
@@ -235,17 +233,6 @@ interface RunCommandFlags {
     outdir: string | undefined;
     output: boolean;
     puzzle: string | undefined;
-}
-
-interface CGConfig {
-  cookie: string;
-  userId: number;
-  puzzleName?: string;
-  codePath?: string;
-  programmingLanguageId?: string;
-  agent1: number;
-  agent2: number;
-  outputDir?: string;
 }
 
 interface TestSessionPlayData {
