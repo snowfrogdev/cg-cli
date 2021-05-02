@@ -14,8 +14,6 @@ export default class Init extends Command {
   }
 
   async run() {
-    // const {flags} = this.parse(Init)
-
     const {cookie} = await inquirer.prompt<{ cookie: string }>([
       {
         name: 'cookie',
