@@ -107,10 +107,11 @@ OPTIONS
   -l, --language=C#    programming language of your bot source code
   -o, --output         whether or not to output simulation data to file
   -p, --puzzle=puzzle  name of puzzle or contest used by CodinGame API
-  --agent1=agent1      id of agent 1
-  --agent2=agent2      id of agent 2
+  --agent1=agent1      id of agent 1, a value of -1 means your own code, a value of -2 means the boss for the league
+  --agent2=agent2      id of agent 2, a value of -1 means your own code, a value of -2 means the boss for the league
   --config=config      [default: ./cgconfig.json] path to config file
   --outdir=outdir      directory in which to place the output data from simulation runs, created if doesn't exist
+  --top10              play agent1 against the top 10 bots in the league
 
 EXAMPLE
   $ cg run 10 -o
