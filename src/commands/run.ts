@@ -4,7 +4,8 @@ import {outputJson, pathExists, readFile, readJson} from 'fs-extra'
 import got from 'got'
 import * as notifier from 'node-notifier'
 import {resolve} from 'path'
-import {CGConfig} from '../abstractions/cgconfig'
+import {CGConfig, GetCompatibleAgentsLeaderboardResponse, StartTestSessionResponse, TestSessionPayload, TestSessionPlayResponse, User} from '../abstractions'
+import {GameDataGeneratorService} from '../services/game-data-generator.service'
 
 export class Run extends Command {
   static description = 'run test session playouts between two bots'
@@ -48,24 +49,30 @@ Writing simulation data... done`,
     const programmingLanguageId = flags.language ?? config.programmingLanguageId!
     const agent1Id = Number(flags.agent1) || config.agent1!
     const agent2Id = Number(flags.agent2) || config.agent2!
-    let top10AgentIds: number[]
     const count = Number(args.count)
 
     const testSessionId = await this.getSessionId(cookie, config.userId!, puzzleName)
     const code = await this.getCode(codePath)
 
     const payload: TestSessionPayload = {cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
-    let gameDataIterator: AsyncGenerator<TestSessionPlayData>
-    if (flags.top10) {
-      top10AgentIds = await this.getTop10UserIds(cookie, testSessionId)
-      gameDataIterator = this.generateGameDataMulti(payload, top10AgentIds)
-    } else {
-      gameDataIterator = this.generateGameData(payload, count)
-    }
+    const gameDataIterator = await this.getGameDataIterator(payload, count, flags.top10)
 
     await this.processGameData(gameDataIterator, flags.output, outdir)
 
     notifier.notify({title: 'cg-cli', message: 'Your command has finished running.'})
+  }
+
+  private async getGameDataIterator(payload: TestSessionPayload, count: number, top10 = false) {
+    this.log('Running simulations...')
+    const gameDataGeneratorService = new GameDataGeneratorService(payload)
+    let gameDataIterator: AsyncGenerator<TestSessionPlayResponse>
+    if (top10) {
+      const top10AgentIds = await this.getTop10UserIds(payload.cookie, payload.testSessionId)
+      gameDataIterator = gameDataGeneratorService.generateGameDataMulti(top10AgentIds)
+    } else {
+      gameDataIterator = gameDataGeneratorService.generateGameData(count)
+    }
+    return gameDataIterator
   }
 
   private async getConfig(configPath: string) {
@@ -190,98 +197,7 @@ Writing simulation data... done`,
     }
   }
 
-  private async * generateGameData(payload: TestSessionPayload, count: number) {
-    this.log('Running simulations...')
-    const progress = cli.progress({
-      format: ' {bar}\u25A0 ETA: {eta}s | {value}/{total} | Agent1: {agent1Wins} wins ({agent1Percentage}) | Agent2: {agent2Wins} wins ({agent2Percentage}) | Margin of Error: {marginOfError}',
-      barCompleteChar: '\u25A0',
-      barIncompleteChar: ' ',
-    })
-    progress.start(count, 0, {agent1Wins: 0, agent2Wins: 0, agent1Percentage: 'N/A', agent2Percentage: 'N/A', marginOfError: 'N/A'})
-
-    const percentage = new Intl.NumberFormat('en-US', {style: 'percent'})
-    let agent1Wins = 0
-    let agent2Wins = 0
-
-    for (let i = 0; i < count; i++) {
-      progress.update(i)
-      const response: TestSessionPlayData = await this.getTestSessionPlayData(payload) // eslint-disable-line no-await-in-loop
-
-      agent1Wins += response.ranks[0] === 0 ? 1 : 0
-      agent2Wins += response.ranks[0] === 1 ? 1 : 0
-
-      const agent1Percentage = agent1Wins / (i + 1)
-      const agent2Percentage = agent2Wins / (i + 1)
-
-      const marginOfError = 1 / Math.sqrt(i + 1)
-
-      progress.update({
-        agent1Wins,
-        agent2Wins,
-        agent1Percentage: percentage.format(agent1Percentage),
-        agent2Percentage: percentage.format(agent2Percentage),
-        marginOfError: percentage.format(marginOfError),
-      })
-
-      yield response
-    }
-
-    progress.increment(1)
-    progress.stop()
-  }
-
-  private async getTestSessionPlayData(payload: TestSessionPayload): Promise<TestSessionPlayData> {
-    try {
-      const response = await got.post<TestSessionPlayData>('https://www.codingame.com/services/TestSession/play', {
-        headers: {
-          cookie: payload.cookie,
-        },
-        json: [
-          payload.testSessionId,
-          {
-            code: payload.code,
-            programmingLanguageId: payload.programmingLanguageId,
-            multi: {
-              agentsIds: [payload.agent1Id, payload.agent2Id],
-              gameOptions: null,
-            },
-          },
-        ],
-        responseType: 'json',
-      })
-      return response.body
-    } catch (error) {
-      const message = error.response ? error.response.body.message : error.message
-      this.log()
-      this.error(`There was a problem running your simulations. ${message}`, {exit: 1})
-    }
-  }
-
-  private async * generateGameDataMulti(payload: TestSessionPayload, top10AgentIds: number[]) {
-    this.log('Running simulations...')
-    const count = top10AgentIds.length
-
-    const percentage = new Intl.NumberFormat('en-US', {style: 'percent'})
-    let agent1Wins = 0
-
-    for (let i = 0; i < count; i++) {
-      cli.action.start(`Playing match ${i + 1} of ${count} against ${top10AgentIds[i]}`)
-      const response: TestSessionPlayData = await this.getTestSessionPlayData({...payload, agent2Id: top10AgentIds[i]}) // eslint-disable-line no-await-in-loop
-
-      const agent1HasWon: boolean = response.ranks[0] === 0
-      agent1Wins += agent1HasWon ? 1 : 0
-
-      const agent1Percentage = agent1Wins / (i + 1)
-
-      const marginOfError = 1 / Math.sqrt(i + 1)
-
-      cli.action.stop(`${agent1HasWon ? 'WIN' : 'LOSS'} | Wins: ${agent1Wins} (${percentage.format(agent1Percentage)}) | Margin of Error: ${percentage.format(marginOfError)}`)
-      yield response
-    }
-    this.log('Simulations done.')
-  }
-
-  private async processGameData(gameDataIterator: AsyncGenerator<TestSessionPlayData, void, unknown>, output: boolean, outdir: string) {
+  private async processGameData(gameDataIterator: AsyncGenerator<TestSessionPlayResponse, void, unknown>, output: boolean, outdir: string) {
     const writeOperations: Promise<void>[] = []
     const date = new Date()
     const dateStamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}${date.getMinutes()}${date.getSeconds()}`
@@ -293,6 +209,7 @@ Writing simulation data... done`,
       }
       i++
     }
+    this.log('Simulations done.')
 
     if (writeOperations.length > 0) {
       cli.action.start('Writing simulation data')
@@ -319,74 +236,3 @@ interface RunCommandFlags {
   top10: boolean;
 }
 
-interface TestSessionPlayData {
-  frames: FrameData[];
-  gameId: number;
-  refereeInput: string;
-  scores: [number, number];
-  ranks: [number, number];
-}
-
-interface FrameData {
-  gameInformation: string;
-  summary?: string;
-  view: string;
-  keyframe: boolean;
-  agentId: -1 | 0 | 1;
-  stdout?: string;
-  stderr?: string;
-}
-
-interface TestSessionPayload {
-  cookie: string;
-  testSessionId: string;
-  code: string;
-  programmingLanguageId: string;
-  agent1Id: number;
-  agent2Id: number;
-}
-
-interface StartTestSessionResponse {
-  currentQuestion: {
-    arena: {
-      arenaCodinGamer: {
-      arenaId: number;
-      divisionId: number;
-      roomIndex: number;
-      condinGameId: number;
-      eligibleForPromotion: boolean;
-    };
-    };
-  };
-}
-
-interface GetCompatibleAgentsLeaderboardResponse {
-  users: User[];
-}
-
-interface User {
-  pseudo: string;
-  score: number;
-  league: {
-    divisionIndex: number;
-    divisionCount: number;
-    openingLeaguesCount: number;
-    divisionOffset: number;
-  };
-  arenaboss?: {
-    nickname: string;
-    league: {
-    divisionIndex: number;
-    divisionCount: number;
-    openingLeaguesCount: number;
-    divisionOffset: number;
-    };
-  };
-  programmingLanguage: string;
-  progress: string;
-  updateTime: number;
-  creationTime: number;
-  percentage: number;
-  agentId: number;
-  inProgress: boolean;
-}
