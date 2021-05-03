@@ -30,13 +30,13 @@ Writing simulation data... done`,
     outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),
-    top10: flags.string({description: 'play your code once against the top 10 bots in the league'}),
+    top10: flags.boolean({description: 'play agent1 against the top 10 bots in the league', default: false, exclusive: ['agent2']}),
   }
 
   static args = [{name: 'count', description: 'the number of simulations to run on the server. Must be bigger than 0', default: 1}]
 
   async run() {
-    const {args, flags}: { args: RunCommandArgs; flags: RunCommandFlags} = this.parse(Run)
+    const {args, flags}: { args: RunCommandArgs; flags: RunCommandFlags } = this.parse(Run)
 
     const config = await this.getConfig(flags.config)
 
@@ -48,12 +48,21 @@ Writing simulation data... done`,
     const programmingLanguageId = flags.language ?? config.programmingLanguageId!
     const agent1Id = Number(flags.agent1) || config.agent1!
     const agent2Id = Number(flags.agent2) || config.agent2!
+    let top10AgentIds: number[]
+    const count = Number(args.count)
 
     const testSessionId = await this.getSessionId(cookie, config.userId!, puzzleName)
     const code = await this.getCode(codePath)
 
     const payload: TestSessionPayload = {cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
-    const gameDataIterator = this.generateGameData(payload, args.count)
+    let gameDataIterator: AsyncGenerator<TestSessionPlayData>
+    if (flags.top10) {
+      top10AgentIds = await this.getTop10UserIds(cookie, testSessionId)
+      gameDataIterator = this.generateGameDataMulti(payload, top10AgentIds)
+    } else {
+      gameDataIterator = this.generateGameData(payload, count)
+    }
+
     await this.processGameData(gameDataIterator, flags.output, outdir)
 
     notifier.notify({title: 'cg-cli', message: 'Your command has finished running.'})
@@ -71,8 +80,9 @@ Writing simulation data... done`,
 
   private validateInputs(flags: RunCommandFlags, config: CGConfig, args: RunCommandArgs) {
     cli.action.start('Validating inputs')
-    if (args.count < 1) {
-      this.error(`The count argument must be bigger than 0 and it was ${args.count}`, {exit: 1})
+    const count = Number(args.count)
+    if (isNaN(count) || count < 1) {
+      this.error(`The count argument must be a number bigger than 0 and it was ${args.count}`, {exit: 1})
     }
 
     if (!config.cookie) {
@@ -132,6 +142,51 @@ Writing simulation data... done`,
       return code
     } catch (error) {
       this.error(`There was a problem trying to read your code from ${codePath}. ${error.message}`, {exit: 1})
+    }
+  }
+
+  private async getTop10UserIds(cookie: string, testSessionId: string): Promise<number[]> {
+    const {divisionId, roomIndex} = await this.getDivisionIdAndRoomIndex(cookie, testSessionId)
+    const users = await this.getUsers(cookie, divisionId, roomIndex, testSessionId)
+    return users.slice(0, 10).map(user => user.agentId)
+  }
+
+  private async getDivisionIdAndRoomIndex(cookie: string, testSessionId: string): Promise<{ divisionId: number; roomIndex: number }> {
+    cli.action.start('Fetching division id and room index from CodinGame')
+    try {
+      const response = await got.post<StartTestSessionResponse>('https://www.codingame.com/services/TestSession/startTestSession', {
+        headers: {
+          cookie,
+        },
+        json: [testSessionId],
+        responseType: 'json',
+      })
+      const {divisionId, roomIndex} = response.body.currentQuestion.arena.arenaCodinGamer
+      cli.action.stop()
+      return {divisionId, roomIndex}
+    } catch (error) {
+      const message = error.response ? error.response.body.message : error.message
+      this.log()
+      this.error(`There was a problem fetching division id and room index from CodinGame. ${message}`, {exit: 1})
+    }
+  }
+
+  private async getUsers(cookie: string, divisionId: number, roomIndex: number, testSessionId: string): Promise<User[]> {
+    cli.action.start('Fetching compatible users from CodinGame')
+    try {
+      const response = await got.post<GetCompatibleAgentsLeaderboardResponse>('https://www.codingame.com/services/Leaderboards/getCompatibleAgentsLeaderboard', {
+        headers: {
+          cookie,
+        },
+        json: [{divisionId, roomIndex}, testSessionId],
+        responseType: 'json',
+      })
+      cli.action.stop()
+      return response.body.users
+    } catch (error) {
+      const message = error.response ? error.response.body.message : error.message
+      this.log()
+      this.error(`There was a problem fetching compatible users from CodinGame. ${message}`, {exit: 1})
     }
   }
 
@@ -202,6 +257,30 @@ Writing simulation data... done`,
     }
   }
 
+  private async * generateGameDataMulti(payload: TestSessionPayload, top10AgentIds: number[]) {
+    this.log('Running simulations...')
+    const count = top10AgentIds.length
+
+    const percentage = new Intl.NumberFormat('en-US', {style: 'percent'})
+    let agent1Wins = 0
+
+    for (let i = 0; i < count; i++) {
+      cli.action.start(`Playing match ${i + 1} of ${count} against ${top10AgentIds[i]}`)
+      const response: TestSessionPlayData = await this.getTestSessionPlayData({...payload, agent2Id: top10AgentIds[i]}) // eslint-disable-line no-await-in-loop
+
+      const agent1HasWon: boolean = response.ranks[0] === 0
+      agent1Wins += agent1HasWon ? 1 : 0
+
+      const agent1Percentage = agent1Wins / (i + 1)
+
+      const marginOfError = 1 / Math.sqrt(i + 1)
+
+      cli.action.stop(`${agent1HasWon ? 'WIN' : 'LOSS'} | Wins: ${agent1Wins} (${percentage.format(agent1Percentage)}) | Margin of Error: ${percentage.format(marginOfError)}`)
+      yield response
+    }
+    this.log('Simulations done.')
+  }
+
   private async processGameData(gameDataIterator: AsyncGenerator<TestSessionPlayData, void, unknown>, output: boolean, outdir: string) {
     const writeOperations: Promise<void>[] = []
     const date = new Date()
@@ -224,7 +303,7 @@ Writing simulation data... done`,
 }
 
 interface RunCommandArgs {
-  count: number;
+  count: string;
 }
 
 interface RunCommandFlags {
@@ -236,7 +315,8 @@ interface RunCommandFlags {
     language: string | undefined;
     outdir: string | undefined;
     output: boolean;
-    puzzle: string | undefined;
+  puzzle: string | undefined;
+  top10: boolean;
 }
 
 interface TestSessionPlayData {
@@ -264,4 +344,49 @@ interface TestSessionPayload {
   programmingLanguageId: string;
   agent1Id: number;
   agent2Id: number;
+}
+
+interface StartTestSessionResponse {
+  currentQuestion: {
+    arena: {
+      arenaCodinGamer: {
+      arenaId: number;
+      divisionId: number;
+      roomIndex: number;
+      condinGameId: number;
+      eligibleForPromotion: boolean;
+    };
+    };
+  };
+}
+
+interface GetCompatibleAgentsLeaderboardResponse {
+  users: User[];
+}
+
+interface User {
+  pseudo: string;
+  score: number;
+  league: {
+    divisionIndex: number;
+    divisionCount: number;
+    openingLeaguesCount: number;
+    divisionOffset: number;
+  };
+  arenaboss?: {
+    nickname: string;
+    league: {
+    divisionIndex: number;
+    divisionCount: number;
+    openingLeaguesCount: number;
+    divisionOffset: number;
+    };
+  };
+  programmingLanguage: string;
+  progress: string;
+  updateTime: number;
+  creationTime: number;
+  percentage: number;
+  agentId: number;
+  inProgress: boolean;
 }
