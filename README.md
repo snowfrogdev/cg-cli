@@ -21,7 +21,7 @@ $ npm install -g @snowfrog/cg-cli
 $ cg COMMAND
 running command...
 $ cg (-v|--version|version)
-@snowfrog/cg-cli/0.3.0 win32-x64 node-v14.16.1
+@snowfrog/cg-cli/0.4.0 win32-x64 node-v14.16.1
 $ cg --help [COMMAND]
 USAGE
   $ cg COMMAND
@@ -32,7 +32,7 @@ USAGE
 # Commands
 <!-- commands -->
 * [`cg autocomplete [SHELL]`](#cg-autocomplete-shell)
-* [`cg bundle [FILE]`](#cg-bundle-file)
+* [`cg bundle`](#cg-bundle)
 * [`cg help [COMMAND]`](#cg-help-command)
 * [`cg init`](#cg-init)
 * [`cg run [COUNT]`](#cg-run-count)
@@ -60,21 +60,34 @@ EXAMPLES
 
 _See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v0.3.0/src/commands/autocomplete/index.ts)_
 
-## `cg bundle [FILE]`
+## `cg bundle`
 
-describe the command here
+bundle your source code into one file that can be submitted to CodinGame
 
 ```
 USAGE
-  $ cg bundle [FILE]
+  $ cg bundle
 
 OPTIONS
-  -f, --force
-  -h, --help       show CLI help
-  -n, --name=name  name to print
+  -c, --code=code
+      path to the file containing the code to be submitted to CodinGame
+
+  -h, --help
+      show CLI help
+
+  -l, 
+  --language=Bash|C|C#|C++|Clojure|D|Dart|F#|Go|Groovy|Haskell|Java|Javascript|Kotlin|Lua|ObjectiveC|OCaml|Pascal|Perl|P
+  HP|Python3|Ruby|Rust|Scala|Swift|TypeScript|VB.NET
+      programming language of your bot source code
+
+  -s, --source=source
+      path to folder containing the source code to be bundled
+
+  --config=config
+      [default: ./cgconfig.json] path to config file
 ```
 
-_See code: [src/commands/bundle.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.3.0/src/commands/bundle.ts)_
+_See code: [src/commands/bundle.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.4.0/src/commands/bundle.ts)_
 
 ## `cg help [COMMAND]`
 
@@ -105,7 +118,7 @@ OPTIONS
   -h, --help  show CLI help
 ```
 
-_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.3.0/src/commands/init.ts)_
+_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.4.0/src/commands/init.ts)_
 
 ## `cg run [COUNT]`
 
@@ -119,16 +132,37 @@ ARGUMENTS
   COUNT  [default: 1] the number of simulations to run on the server. Must be bigger than 0
 
 OPTIONS
-  -c, --code=code      path to your bot source code
-  -h, --help           show CLI help
-  -l, --language=C#    programming language of your bot source code
-  -o, --output         whether or not to output simulation data to file
-  -p, --puzzle=puzzle  name of puzzle or contest used by CodinGame API
-  --agent1=agent1      id of agent 1, a value of -1 means your own code, a value of -2 means the boss for the league
-  --agent2=agent2      id of agent 2, a value of -1 means your own code, a value of -2 means the boss for the league
-  --config=config      [default: ./cgconfig.json] path to config file
-  --outdir=outdir      directory in which to place the output data from simulation runs, created if doesn't exist
-  --top10              play agent1 against the top 10 bots in the league
+  -c, --code=code
+      path to the file containing the code to be submitted to CodinGame
+
+  -h, --help
+      show CLI help
+
+  -l, 
+  --language=Bash|C|C#|C++|Clojure|D|Dart|F#|Go|Groovy|Haskell|Java|Javascript|Kotlin|Lua|ObjectiveC|OCaml|Pascal|Perl|P
+  HP|Python3|Ruby|Rust|Scala|Swift|TypeScript|VB.NET
+      programming language of your bot source code
+
+  -o, --output
+      whether or not to output simulation data to file
+
+  -p, --puzzle=puzzle
+      name of puzzle or contest used by CodinGame API
+
+  --agent1=agent1
+      id of agent 1, a value of -1 means your own code, a value of -2 means the boss for the league
+
+  --agent2=agent2
+      id of agent 2, a value of -1 means your own code, a value of -2 means the boss for the league
+
+  --config=config
+      [default: ./cgconfig.json] path to config file
+
+  --outdir=outdir
+      directory in which to place the output data from simulation runs, created if doesn't exist
+
+  --top10
+      play agent1 against the top 10 bots in the league
 
 EXAMPLE
   $ cg run 10 -o
@@ -142,7 +176,7 @@ EXAMPLE
   Writing simulation data... done
 ```
 
-_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.3.0/src/commands/run.ts)_
+_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.4.0/src/commands/run.ts)_
 <!-- commandsstop -->
 
 * [`cg autocomplete [SHELL]`](#cg-autocomplete-shell)
