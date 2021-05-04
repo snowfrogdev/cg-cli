@@ -89,18 +89,17 @@ async function bundleCSharp(sourcePath: string, bundledFilePath: string): void {
 
     if (fileNamespace) allNamespaces.add(fileNamespace)
     fileUsings.forEach((value, key) => allUsings.set(key, value))
-
+   
     output += code + '\n'
   }
 
   allNamespaces.forEach(namespace => allUsings.delete(namespace))
-  output.trim()
   allUsings.forEach(value => {
-    output = value + '\n' + output
+    output = value + '\n' + output.trim()
   })
 
   try {
-    await writeFile(resolve(bundledFilePath), output, 'utf-8')
+    await writeFile(resolve(bundledFilePath), output, 'utf8')
   } catch (error) {
     throw new Error(`There was a problem trying to write to ${bundledFilePath}. ${error.message}`)
   }

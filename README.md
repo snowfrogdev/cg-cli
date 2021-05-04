@@ -178,8 +178,3 @@ EXAMPLE
 
 _See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.4.0/src/commands/run.ts)_
 <!-- commandsstop -->
-
-* [`cg autocomplete [SHELL]`](#cg-autocomplete-shell)
-* [`cg help [COMMAND]`](#cg-help-command)
-* [`cg init`](#cg-init)
-* [`cg run [COUNT]`](#cg-run-count)
