@@ -90,7 +90,7 @@ async function bundleCSharp(sourcePath: string, bundledFilePath: string): Promis
     if (fileNamespace) allNamespaces.add(fileNamespace)
     fileUsings.forEach((value, key) => allUsings.set(key, value))
 
-    output += code + '\n'
+    output += code.trim() + '\n'
   }
 
   allNamespaces.forEach(namespace => allUsings.delete(namespace))
