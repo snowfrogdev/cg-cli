@@ -71,12 +71,12 @@ interface BundleCommandFlags {
     source: string | undefined;
 }
 
-async function bundleCSharp(sourcePath: string, bundledFilePath: string): void {
+async function bundleCSharp(sourcePath: string, bundledFilePath: string): Promise<void> {
   let output = ''
   const allUsings = new Map<string, string>()
   const allNamespaces = new Set<string>()
   const nameSpaceRegex = /\bnamespace\s+(\S+)[\s\n\r]+{([\s\S]+)}/
-  const usingRegex = /\busing\s+([\w\.]+);/g
+  const usingRegex = /\busing\s+(?:static\s+)?([\w\.]+);/g
 
   const paths = await getFilePathsByExtension(sourcePath, ['bin', 'obj'], '.cs')
 
@@ -89,7 +89,7 @@ async function bundleCSharp(sourcePath: string, bundledFilePath: string): void {
 
     if (fileNamespace) allNamespaces.add(fileNamespace)
     fileUsings.forEach((value, key) => allUsings.set(key, value))
-   
+
     output += code + '\n'
   }
 
