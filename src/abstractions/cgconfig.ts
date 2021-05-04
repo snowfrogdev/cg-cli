@@ -3,6 +3,7 @@ export interface CGConfig {
   userId?: number;
   puzzleName?: string;
   codePath?: string;
+  sourcePath?: string;
   programmingLanguageId?: string;
   /**
    * The agent id for the first agent.

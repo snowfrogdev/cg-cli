@@ -32,6 +32,7 @@ USAGE
 # Commands
 <!-- commands -->
 * [`cg autocomplete [SHELL]`](#cg-autocomplete-shell)
+* [`cg bundle [FILE]`](#cg-bundle-file)
 * [`cg help [COMMAND]`](#cg-help-command)
 * [`cg init`](#cg-init)
 * [`cg run [COUNT]`](#cg-run-count)
@@ -58,6 +59,22 @@ EXAMPLES
 ```
 
 _See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v0.3.0/src/commands/autocomplete/index.ts)_
+
+## `cg bundle [FILE]`
+
+describe the command here
+
+```
+USAGE
+  $ cg bundle [FILE]
+
+OPTIONS
+  -f, --force
+  -h, --help       show CLI help
+  -n, --name=name  name to print
+```
+
+_See code: [src/commands/bundle.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.3.0/src/commands/bundle.ts)_
 
 ## `cg help [COMMAND]`
 

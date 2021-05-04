@@ -18,6 +18,7 @@
     "fs-extra": "^9.1.0",
     "got": "^11.8.2",
     "inquirer": "^8.0.0",
+    "klaw": "^3.0.0",
     "node-notifier": "^9.0.1",
     "tslib": "^1.14.1"
   },
@@ -28,6 +29,7 @@
     "@types/cli-progress": "^3.9.1",
     "@types/fs-extra": "^9.0.11",
     "@types/inquirer": "^7.3.1",
+    "@types/klaw": "^3.0.1",
     "@types/mocha": "^5.2.7",
     "@types/node": "^10.17.59",
     "@types/node-notifier": "^8.0.0",

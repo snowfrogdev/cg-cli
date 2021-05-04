@@ -5,6 +5,7 @@ import got from 'got'
 import * as notifier from 'node-notifier'
 import {resolve} from 'path'
 import {CGConfig, GetCompatibleAgentsLeaderboardResponse, StartTestSessionResponse, TestSessionPayload, TestSessionPlayResponse, User} from '../abstractions'
+import {programmingLanguageChoices} from '../constants/programming-language-choices'
 import {GameDataGeneratorService} from '../services/game-data-generator.service'
 
 export class Run extends Command {
@@ -25,9 +26,9 @@ Writing simulation data... done`,
     help: flags.help({char: 'h'}),
     agent1: flags.string({description: 'id of agent 1, a value of -1 means your own code, a value of -2 means the boss for the league'}),
     agent2: flags.string({description: 'id of agent 2, a value of -1 means your own code, a value of -2 means the boss for the league'}),
-    code: flags.string({char: 'c', description: 'path to your bot source code'}),
+    code: flags.string({char: 'c', description: 'path to the file containing the code to be submitted to CodinGame'}),
     config: flags.string({description: 'path to config file', default: './cgconfig.json'}),
-    language: flags.string({char: 'l', description: 'programming language of your bot source code', options: ['C#']}),
+    language: flags.string({char: 'l', description: 'programming language of your bot source code', options: programmingLanguageChoices}),
     outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),

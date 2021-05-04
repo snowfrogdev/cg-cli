@@ -27,7 +27,7 @@ export default class Init extends Command {
 
     const contestChoices = await this.getContests(`rememberMe=${cookie}`, userId)
 
-    const {puzzleName, programmingLanguageId, codePath} = await inquirer.prompt<{ puzzleName: string; programmingLanguageId: string; codePath: string}>([
+    const {puzzleName, programmingLanguageId, codePath, sourcePath} = await inquirer.prompt<{ puzzleName: string; programmingLanguageId: string; codePath: string; sourcePath: string}>([
       {
         name: 'puzzleName',
         message: 'What puzzle are you working on',
@@ -44,11 +44,16 @@ export default class Init extends Command {
       },
       {
         name: 'codePath',
-        message: 'What is the relative path of the code you\'ll be submitting to CodinGame',
+        message: 'What is the relative path and name of the file you\'ll be submitting to CodinGame',
       },
+      {
+        name: 'sourcePath',
+        message: 'What is the relative path of the folder containing your source code to be bundled',
+      },
+
     ])
 
-    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId, codePath, agent1: -1, agent2: -2}
+    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId, codePath, sourcePath, agent1: -1, agent2: -2}
 
     this.saveConfig(config)
 
