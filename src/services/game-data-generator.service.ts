@@ -1,13 +1,15 @@
 import {cli} from 'cli-ux'
 import got from 'got'
-import {TestSessionPayload, TestSessionPlayResponse} from '../abstractions'
+import {TestSessionPayload, TestSessionPlayResponse, User} from '../abstractions'
 
 export class GameDataGeneratorService {
-  constructor(private payload: TestSessionPayload) {} // eslint-disable-line no-useless-constructor
+  constructor(private options: GameDataGeneratorOptions) {} // eslint-disable-line no-useless-constructor
 
   public async * generateGameData(count: number) {
+    const agent2Name = this.options.agent2[0].pseudo
+    const agent2Id = this.options.agent2[0].agentId
     const progress = cli.progress({
-      format: ' {bar}\u25A0 ETA: {eta}s | {value}/{total} | Agent1: {agent1Wins} wins ({agent1Percentage}) | Agent2: {agent2Wins} wins ({agent2Percentage}) | Margin of Error: {marginOfError}',
+      format: `{bar}\u25A0 ETA: {eta}s | {value}/{total} | Agent1: {agent1Wins} wins ({agent1Percentage}) | ${agent2Name} (${agent2Id}): {agent2Wins} wins ({agent2Percentage}) | Margin of Error: {marginOfError}`,
       barCompleteChar: '\u25A0',
       barIncompleteChar: ' ',
     })
@@ -19,7 +21,8 @@ export class GameDataGeneratorService {
 
     for (let i = 0; i < count; i++) {
       progress.update(i)
-      const response: TestSessionPlayResponse = await this.getTestSessionPlayData(this.payload) // eslint-disable-line no-await-in-loop
+      const payload: TestSessionPayload = {...this.options, agent2Id: this.options.agent2[0].agentId}
+      const response: TestSessionPlayResponse = await this.getTestSessionPlayData(payload) // eslint-disable-line no-await-in-loop
 
       agent1Wins += response.ranks[0] === 0 ? 1 : 0
       agent2Wins += response.ranks[0] === 1 ? 1 : 0
@@ -44,15 +47,15 @@ export class GameDataGeneratorService {
     progress.stop()
   }
 
-  public async * generateGameDataMulti(top10AgentIds: number[]) {
-    const count = top10AgentIds.length
+  public async * generateGameDataMulti(users: User[]) {
+    const count = users.length
 
     const percentage = new Intl.NumberFormat('en-US', {style: 'percent'})
     let agent1Wins = 0
 
     for (let i = 0; i < count; i++) {
-      cli.action.start(`Playing match ${i + 1} of ${count} against ${top10AgentIds[i]}`)
-      const response: TestSessionPlayResponse = await this.getTestSessionPlayData({...this.payload, agent2Id: top10AgentIds[i]}) // eslint-disable-line no-await-in-loop
+      cli.action.start(`Playing match ${i + 1} of ${count} against ${users[i].pseudo} | ${users[i].agentId}`)
+      const response: TestSessionPlayResponse = await this.getTestSessionPlayData({...this.options, agent2Id: users[i].agentId}) // eslint-disable-line no-await-in-loop
 
       const agent1HasWon: boolean = response.ranks[0] === 0
       agent1Wins += agent1HasWon ? 1 : 0
@@ -93,3 +96,11 @@ export class GameDataGeneratorService {
   }
 }
 
+export interface GameDataGeneratorOptions {
+  cookie: string;
+  testSessionId: string;
+  code: string;
+  programmingLanguageId: string;
+  agent1Id: number;
+  agent2: User[];
+}

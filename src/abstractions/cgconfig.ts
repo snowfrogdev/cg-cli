@@ -12,10 +12,10 @@ export interface CGConfig {
    */
   agent1?: number;
    /**
-   * The agent id for the second agent.
+   * An array of agent ids to play agent1 against.
    * A value of -1 means the code supplied with the request.
    * A value of -2 meand the boss for the league.
    */
-  agent2?: number;
+  agent2?: number[];
   outputDir?: string;
 }

@@ -4,9 +4,9 @@ import {outputJson, pathExists, readFile, readJson} from 'fs-extra'
 import got from 'got'
 import * as notifier from 'node-notifier'
 import {resolve} from 'path'
-import {CGConfig, GetCompatibleAgentsLeaderboardResponse, StartTestSessionResponse, TestSessionPayload, TestSessionPlayResponse, User} from '../abstractions'
+import {CGConfig, GetCompatibleAgentsLeaderboardResponse, StartTestSessionResponse, TestSessionPlayResponse, User} from '../abstractions'
 import {programmingLanguageChoices} from '../constants/programming-language-choices'
-import {GameDataGeneratorService} from '../services/game-data-generator.service'
+import {GameDataGeneratorOptions, GameDataGeneratorService} from '../services/game-data-generator.service'
 
 export class Run extends Command {
   static description = 'run test session playouts between two bots'
@@ -49,31 +49,20 @@ Writing simulation data... done`,
     const codePath = flags.code ?? config.codePath!
     const programmingLanguageId = flags.language ?? config.programmingLanguageId!
     const agent1Id = Number(flags.agent1) || config.agent1!
-    const agent2Id = Number(flags.agent2) || config.agent2!
+    const agent2Id = flags.agent2 ? [Number(flags.agent2)] : config.agent2!
     const count = Number(args.count)
 
     const testSessionId = await this.getSessionId(cookie, config.userId!, puzzleName)
     const code = await this.getCode(codePath)
 
-    const payload: TestSessionPayload = {cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2Id}
-    const gameDataIterator = await this.getGameDataIterator(payload, count, flags.top10)
+    const users: User[] = await this.getRequestedUsers(cookie, testSessionId, agent1Id, agent2Id, flags.top10)
+
+    const options: GameDataGeneratorOptions = {cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2: users}
+    const gameDataIterator = await this.getGameDataIterator(options, count)
 
     await this.processGameData(gameDataIterator, flags.output, outdir)
 
     notifier.notify({title: 'cg-cli', message: 'Your command has finished running.'})
-  }
-
-  private async getGameDataIterator(payload: TestSessionPayload, count: number, top10 = false) {
-    this.log('Running simulations...')
-    const gameDataGeneratorService = new GameDataGeneratorService(payload)
-    let gameDataIterator: AsyncGenerator<TestSessionPlayResponse>
-    if (top10) {
-      const top10AgentIds = await this.getTop10UserIds(payload.cookie, payload.testSessionId)
-      gameDataIterator = gameDataGeneratorService.generateGameDataMulti(top10AgentIds)
-    } else {
-      gameDataIterator = gameDataGeneratorService.generateGameData(count)
-    }
-    return gameDataIterator
   }
 
   private async getConfig(configPath: string) {
@@ -110,7 +99,11 @@ Writing simulation data... done`,
     }
 
     if (!flags.agent2 && !config.agent2) {
-      this.error('No id for agent 2 was specified. Please add \'agent2\' property to config file or use --agent2 flag.', {exit: 1})
+      this.error('No id(s) for agent 2 was specified. Please add \'agent2\' property to config file or use --agent2 flag.', {exit: 1})
+    }
+
+    if (!Array.isArray(config.agent2) || config.agent2.length === 0) {
+      this.error('The \'agent2\' property in the config file must be an array of one or more agent ids.', {exit: 1})
     }
 
     if (!flags.puzzle && !config.puzzleName) {
@@ -153,10 +146,41 @@ Writing simulation data... done`,
     }
   }
 
-  private async getTop10UserIds(cookie: string, testSessionId: string): Promise<number[]> {
+  private async getRequestedUsers(cookie: string, testSessionId: string, agent1Id: number, agent2Id: number[], hasTop10: boolean) {
+    let users: User[]
+    const top10 = await this.getTop10Users(cookie, testSessionId)
+    const bossId = top10[0].agentId
+    if (hasTop10) {
+      users = top10
+    } else {
+      agent2Id = agent2Id.map(agentId => agentId === -2 ? bossId : agent1Id)
+      users = await this.getUsersByAgentId(cookie, testSessionId, agent2Id)
+    }
+    return users
+  }
+
+  private async getGameDataIterator(options: GameDataGeneratorOptions, count: number) {
+    this.log('Running simulations...')
+    const gameDataGeneratorService = new GameDataGeneratorService(options)
+    let gameDataIterator: AsyncGenerator<TestSessionPlayResponse>
+    if (options.agent2.length > 1) {
+      gameDataIterator = gameDataGeneratorService.generateGameDataMulti(options.agent2)
+    } else {
+      gameDataIterator = gameDataGeneratorService.generateGameData(count)
+    }
+    return gameDataIterator
+  }
+
+  private async getTop10Users(cookie: string, testSessionId: string): Promise<User[]> {
     const {divisionId, roomIndex} = await this.getDivisionIdAndRoomIndex(cookie, testSessionId)
     const users = await this.getUsers(cookie, divisionId, roomIndex, testSessionId)
-    return users.slice(0, 10).map(user => user.agentId)
+    return users.slice(0, 10)
+  }
+
+  private async getUsersByAgentId(cookie: string, testSessionId: string, agentIds: number[]): Promise<User[]> {
+    const {divisionId, roomIndex} = await this.getDivisionIdAndRoomIndex(cookie, testSessionId)
+    const users = await this.getUsers(cookie, divisionId, roomIndex, testSessionId)
+    return users.filter(user => agentIds.includes(user.agentId))
   }
 
   private async getDivisionIdAndRoomIndex(cookie: string, testSessionId: string): Promise<{ divisionId: number; roomIndex: number }> {
