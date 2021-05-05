@@ -1,11 +1,11 @@
 import {Command, flags} from '@oclif/command'
 import cli from 'cli-ux'
 import {outputJson, pathExists, readFile, readJson} from 'fs-extra'
-import got from 'got'
 import * as notifier from 'node-notifier'
 import {resolve} from 'path'
-import {CGConfig, GetCompatibleAgentsLeaderboardResponse, StartTestSessionResponse, TestSessionPlayResponse, User} from '../abstractions'
+import {CGConfig, TestSessionPlayResponse, User, UserResponse} from '../abstractions'
 import {programmingLanguageChoices} from '../constants/programming-language-choices'
+import {CodinGameApiService} from '../services/codingame-api.service'
 import {GameDataGeneratorOptions, GameDataGeneratorService} from '../services/game-data-generator.service'
 
 export class Run extends Command {
@@ -51,14 +51,14 @@ Writing simulation data... done`,
     const agent1Id = Number(flags.agent1) || config.agent1!
     const agent2Id = flags.agent2 ? [Number(flags.agent2)] : config.agent2!
     const count = Number(args.count)
+    const apiService = await CodinGameApiService.build(cookie, config.userId!, puzzleName)
 
-    const testSessionId = await this.getSessionId(cookie, config.userId!, puzzleName)
     const code = await this.getCode(codePath)
 
-    const users: User[] = await this.getRequestedUsers(cookie, testSessionId, agent1Id, agent2Id, flags.top10)
+    const users: User[] = await this.getRequestedUsers(apiService, agent1Id, agent2Id, flags.top10)
 
-    const options: GameDataGeneratorOptions = {cookie, testSessionId, code, programmingLanguageId, agent1Id, agent2: users}
-    const gameDataIterator = await this.getGameDataIterator(options, count)
+    const options: GameDataGeneratorOptions = {cookie, code, programmingLanguageId, agent1Id, agent2: users}
+    const gameDataIterator = await this.getGameDataIterator(apiService, options, count)
 
     await this.processGameData(gameDataIterator, flags.output, outdir)
 
@@ -116,25 +116,6 @@ Writing simulation data... done`,
     cli.action.stop()
   }
 
-  private async getSessionId(cookie: string, userId: number, puzzleName: string): Promise<string> {
-    cli.action.start('Fetching test session id from CodinGame')
-    try {
-      const response = await got.post<{ reportReady: boolean; handle: string; direct: boolean }>('https://www.codingame.com/services/Puzzle/generateSessionFromPuzzlePrettyId', {
-        headers: {
-          cookie,
-        },
-        json: [userId, puzzleName, false],
-        responseType: 'json',
-      })
-      cli.action.stop()
-      return response.body.handle
-    } catch (error) {
-      const message = error.response ? error.response.body.message : error.message
-      this.log()
-      this.error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. ${message}`, {exit: 1})
-    }
-  }
-
   private async getCode(codePath: string) {
     cli.action.start('Grabbing source code')
     try {
@@ -146,22 +127,22 @@ Writing simulation data... done`,
     }
   }
 
-  private async getRequestedUsers(cookie: string, testSessionId: string, agent1Id: number, agent2Id: number[], hasTop10: boolean) {
-    let users: User[]
-    const top10 = await this.getTop10Users(cookie, testSessionId)
+  private async getRequestedUsers(api: CodinGameApiService, agent1Id: number, agent2Id: number[], hasTop10: boolean): Promise<User[]> {
+    let users: UserResponse[]
+    const top10 = await this.getTop10Users(api)
     const bossId = top10[0].agentId
     if (hasTop10) {
       users = top10
     } else {
-      agent2Id = agent2Id.map(agentId => agentId === -2 ? bossId : agent1Id)
-      users = await this.getUsersByAgentId(cookie, testSessionId, agent2Id)
+      agent2Id = agent2Id.map(agentId => agentId === -2 ? bossId! : agent1Id) // being a bad boy here, should remove ! and validate
+      users = await this.getUsersByAgentId(api, agent2Id)
     }
-    return users
+    return users.map(user => ({agentId: user.agentId!, pseudo: user.pseudo!})) // being a bad boy here, should remove ! and validate
   }
 
-  private async getGameDataIterator(options: GameDataGeneratorOptions, count: number) {
+  private async getGameDataIterator(apiService: CodinGameApiService, options: GameDataGeneratorOptions, count: number) {
     this.log('Running simulations...')
-    const gameDataGeneratorService = new GameDataGeneratorService(options)
+    const gameDataGeneratorService = new GameDataGeneratorService(apiService, options)
     let gameDataIterator: AsyncGenerator<TestSessionPlayResponse>
     if (options.agent2.length > 1) {
       gameDataIterator = gameDataGeneratorService.generateGameDataMulti(options.agent2)
@@ -171,55 +152,22 @@ Writing simulation data... done`,
     return gameDataIterator
   }
 
-  private async getTop10Users(cookie: string, testSessionId: string): Promise<User[]> {
-    const {divisionId, roomIndex} = await this.getDivisionIdAndRoomIndex(cookie, testSessionId)
-    const users = await this.getUsers(cookie, divisionId, roomIndex, testSessionId)
-    return users.slice(0, 10)
-  }
+  private async getTop10Users(apiService: CodinGameApiService): Promise<User[]> {
+    const users = (await apiService.getFilteredArenaDivisionRoomLeaderboard()).users
 
-  private async getUsersByAgentId(cookie: string, testSessionId: string, agentIds: number[]): Promise<User[]> {
-    const {divisionId, roomIndex} = await this.getDivisionIdAndRoomIndex(cookie, testSessionId)
-    const users = await this.getUsers(cookie, divisionId, roomIndex, testSessionId)
-    return users.filter(user => agentIds.includes(user.agentId))
-  }
-
-  private async getDivisionIdAndRoomIndex(cookie: string, testSessionId: string): Promise<{ divisionId: number; roomIndex: number }> {
-    cli.action.start('Fetching division id and room index from CodinGame')
-    try {
-      const response = await got.post<StartTestSessionResponse>('https://www.codingame.com/services/TestSession/startTestSession', {
-        headers: {
-          cookie,
-        },
-        json: [testSessionId],
-        responseType: 'json',
-      })
-      const {divisionId, roomIndex} = response.body.currentQuestion.arena.arenaCodinGamer
-      cli.action.stop()
-      return {divisionId, roomIndex}
-    } catch (error) {
-      const message = error.response ? error.response.body.message : error.message
-      this.log()
-      this.error(`There was a problem fetching division id and room index from CodinGame. ${message}`, {exit: 1})
+    if (!users) {
+      throw new Error('Could not fetch users from CondinGame servers.')
     }
+    return users.slice(0, 10).map(user => ({agentId: user.agentId!, pseudo: user.pseudo!})) // being a bad boy here, should remove ! and validate
   }
 
-  private async getUsers(cookie: string, divisionId: number, roomIndex: number, testSessionId: string): Promise<User[]> {
-    cli.action.start('Fetching compatible users from CodinGame')
-    try {
-      const response = await got.post<GetCompatibleAgentsLeaderboardResponse>('https://www.codingame.com/services/Leaderboards/getCompatibleAgentsLeaderboard', {
-        headers: {
-          cookie,
-        },
-        json: [{divisionId, roomIndex}, testSessionId],
-        responseType: 'json',
-      })
-      cli.action.stop()
-      return response.body.users
-    } catch (error) {
-      const message = error.response ? error.response.body.message : error.message
-      this.log()
-      this.error(`There was a problem fetching compatible users from CodinGame. ${message}`, {exit: 1})
+  private async getUsersByAgentId(apiService: CodinGameApiService, agentIds: number[]): Promise<User[]> {
+    const users = (await apiService.getFilteredArenaDivisionRoomLeaderboard()).users
+
+    if (!users) {
+      throw new Error('Could not fetch users from CondinGame servers.')
     }
+    return users.filter(user => agentIds.includes(user.agentId!)).map(user => ({agentId: user.agentId!, pseudo: user.pseudo!})) // being a bad boy here, should remove ! and validate
   }
 
   private async processGameData(gameDataIterator: AsyncGenerator<TestSessionPlayResponse, void, unknown>, output: boolean, outdir: string) {

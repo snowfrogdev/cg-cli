@@ -3,7 +3,7 @@ import cli from 'cli-ux'
 import {outputJson} from 'fs-extra'
 import got from 'got'
 import * as inquirer from 'inquirer'
-import {CGConfig} from '../abstractions/cgconfig'
+import {CGConfig} from '../abstractions'
 import {programmingLanguageChoices} from '../constants/programming-language-choices'
 
 export default class Init extends Command {

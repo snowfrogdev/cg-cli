@@ -1,9 +1,9 @@
 import {cli} from 'cli-ux'
-import got from 'got'
-import {TestSessionPayload, TestSessionPlayResponse, User} from '../abstractions'
+import {TestSessionPlayOptions, TestSessionPlayResponse, User} from '../abstractions'
+import {CodinGameApiService} from './codingame-api.service'
 
 export class GameDataGeneratorService {
-  constructor(private options: GameDataGeneratorOptions) {} // eslint-disable-line no-useless-constructor
+  constructor(private apiService: CodinGameApiService, private options: GameDataGeneratorOptions) {} // eslint-disable-line no-useless-constructor
 
   public async * generateGameData(count: number) {
     const agent2Name = this.options.agent2[0].pseudo
@@ -21,8 +21,8 @@ export class GameDataGeneratorService {
 
     for (let i = 0; i < count; i++) {
       progress.update(i)
-      const payload: TestSessionPayload = {...this.options, agent2Id: this.options.agent2[0].agentId}
-      const response: TestSessionPlayResponse = await this.getTestSessionPlayData(payload) // eslint-disable-line no-await-in-loop
+      const payload: TestSessionPlayOptions = {...this.options, agent2Id: this.options.agent2[0].agentId}
+      const response: TestSessionPlayResponse = await this.apiService.getTestSessionPlayData(payload) // eslint-disable-line no-await-in-loop
 
       agent1Wins += response.ranks[0] === 0 ? 1 : 0
       agent2Wins += response.ranks[0] === 1 ? 1 : 0
@@ -55,7 +55,7 @@ export class GameDataGeneratorService {
 
     for (let i = 0; i < count; i++) {
       cli.action.start(`Playing match ${i + 1} of ${count} against ${users[i].pseudo} | ${users[i].agentId}`)
-      const response: TestSessionPlayResponse = await this.getTestSessionPlayData({...this.options, agent2Id: users[i].agentId}) // eslint-disable-line no-await-in-loop
+      const response: TestSessionPlayResponse = await this.apiService.getTestSessionPlayData({...this.options, agent2Id: users[i].agentId}) // eslint-disable-line no-await-in-loop
 
       const agent1HasWon: boolean = response.ranks[0] === 0
       agent1Wins += agent1HasWon ? 1 : 0
@@ -68,37 +68,10 @@ export class GameDataGeneratorService {
       yield response
     }
   }
-
-  private async getTestSessionPlayData(payload: TestSessionPayload): Promise<TestSessionPlayResponse> {
-    try {
-      const response = await got.post<TestSessionPlayResponse>('https://www.codingame.com/services/TestSession/play', {
-        headers: {
-          cookie: payload.cookie,
-        },
-        json: [
-          payload.testSessionId,
-          {
-            code: payload.code,
-            programmingLanguageId: payload.programmingLanguageId,
-            multi: {
-              agentsIds: [payload.agent1Id, payload.agent2Id],
-              gameOptions: null,
-            },
-          },
-        ],
-        responseType: 'json',
-      })
-      return response.body
-    } catch (error) {
-      const message = error.response ? error.response.body.message : error.message
-      throw new Error(`There was a problem running your simulations. ${message}`)
-    }
-  }
 }
 
 export interface GameDataGeneratorOptions {
   cookie: string;
-  testSessionId: string;
   code: string;
   programmingLanguageId: string;
   agent1Id: number;

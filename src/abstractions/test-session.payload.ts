@@ -1,6 +1,4 @@
-export interface TestSessionPayload {
-  cookie: string;
-  testSessionId: string;
+export interface TestSessionPlayOptions {
   code: string;
   programmingLanguageId: string;
   agent1Id: number;
