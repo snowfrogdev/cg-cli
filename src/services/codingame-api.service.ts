@@ -1,5 +1,6 @@
 import got from 'got'
 import {GetFilteredArenaDivisionRoomLeaderboardResponse, StartTestSessionResponse, TestSessionPlayOptions, TestSessionPlayResponse, UserResponse} from '../abstractions'
+import {ThrottlingError} from '../errors/throttling.error'
 
 /* eslint-disable no-useless-constructor */
 export class CodinGameApiService {
@@ -10,14 +11,15 @@ export class CodinGameApiService {
     private readonly testSessionId: string,
     private readonly publicHandle: string,
     private readonly divisionId: number,
-    private readonly roomIndex: number
+    private readonly roomIndex: number,
+    private readonly agentId: number
   ) { }
 
   static async build(cookie: string, userId: number, puzzleName: string): Promise<CodinGameApiService> {
     const testSessionId = await this.getSessionId(cookie, userId, puzzleName)
-    const publicHandle = await this.getPublicHandle(cookie, testSessionId)
+    const {publicHandle, agentId} = await this.getPublicHandleAndAgentId(cookie, testSessionId)
     const {divisionId, roomIndex} = await this.getDivisionIdAndRoomIndex(cookie, testSessionId)
-    return new CodinGameApiService(cookie, testSessionId, publicHandle, divisionId, roomIndex)
+    return new CodinGameApiService(cookie, testSessionId, publicHandle, divisionId, roomIndex, agentId)
   }
 
   private static async getSessionId(cookie: string, userId: number, puzzleName: string): Promise<string> {
@@ -36,7 +38,7 @@ export class CodinGameApiService {
     }
   }
 
-  private static async getPublicHandle(cookie: string, testSessionId: string): Promise<string> {
+  private static async getPublicHandleAndAgentId(cookie: string, testSessionId: string): Promise<{publicHandle: string; agentId: number}> {
     try {
       const response = await got.post<UserResponse>(`${CodinGameApiService.baseUrl}/Leaderboards/getUserArenaDivisionRoomRankingByTestSessionHandle`, {
         headers: {
@@ -45,7 +47,7 @@ export class CodinGameApiService {
         json: [testSessionId, 'global'],
         responseType: 'json',
       })
-      return response.body?.codingamer?.publicHandle!
+      return {publicHandle: response.body?.codingamer?.publicHandle!, agentId: response.body?.agentId!}
     } catch (error) {
       const message = error.response ? error.response.body.message : error.message
       throw new Error(`There was a problem fetching your public handle from CodinGame. ${message}`)
@@ -106,6 +108,9 @@ export class CodinGameApiService {
       })
       return response.body
     } catch (error) {
+      if (error?.response?.body?.id === 407) {
+        throw new ThrottlingError(error.response.body.message)
+      }
       const message = error.response ? error.response.body.message : error.message
       throw new Error(`There was a problem running your simulations. ${message}`)
     }

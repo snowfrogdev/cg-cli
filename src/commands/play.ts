@@ -19,7 +19,7 @@ Validating inputs... done
 Fetching test session id from CodinGame... done
 Grabbing source code... done
 Playing games...
- ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of Error: 32%
+■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of Error: 32%
 Writing game data... done`,
   ]
 
@@ -166,6 +166,7 @@ Writing game data... done`,
     const gameDataGeneratorService = new GameDataGeneratorService(apiService, options)
     let gameDataIterator: AsyncGenerator<TestSessionPlayResponse>
     if (options.agent2.length > 1) {
+      if (count > 1) this.warn(`You passed a count flag of ${count} but multi agent plays will only run once per agent.`)
       gameDataIterator = gameDataGeneratorService.generateGameDataMulti()
     } else {
       gameDataIterator = gameDataGeneratorService.generateGameData(count)
@@ -177,7 +178,7 @@ Writing game data... done`,
     const users = (await apiService.getFilteredArenaDivisionRoomLeaderboard()).users
 
     if (!users) {
-      throw new Error('Could not fetch users from CondinGame servers.')
+      throw new Error('Could not fetch users from CodinGame servers.')
     }
     return users.slice(0, 10).map(user => ({agentId: user.agentId!, pseudo: user.pseudo!})) // being a bad boy here, should remove ! and validate
   }

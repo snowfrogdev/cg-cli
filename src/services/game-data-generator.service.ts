@@ -1,8 +1,13 @@
 import {cli} from 'cli-ux'
-import {TestSessionPlayOptions, TestSessionPlayResponse, User} from '../abstractions'
+import {TestSessionPlayResponse, User} from '../abstractions'
+import {ThrottlingError} from '../errors/throttling.error'
 import {CodinGameApiService} from './codingame-api.service'
 
 export class GameDataGeneratorService {
+  private readonly startingTimeOut = 10000;
+
+  private lastTimeOut = 5000;
+
   constructor(private apiService: CodinGameApiService, private options: GameDataGeneratorOptions) {} // eslint-disable-line no-useless-constructor
 
   public async * generateGameData(count: number) {
@@ -21,8 +26,8 @@ export class GameDataGeneratorService {
 
     for (let i = 0; i < count; i++) {
       progress.update(i)
-      const payload: TestSessionPlayOptions = {...this.options, agent2Id: this.options.agent2[0].agentId}
-      const response: TestSessionPlayResponse = await this.apiService.getTestSessionPlayData(payload) // eslint-disable-line no-await-in-loop
+
+      const response: TestSessionPlayResponse = await this.getPlayData(this.options.agent2[0].agentId) // eslint-disable-line no-await-in-loop
 
       agent1Wins += response.ranks[0] === 0 ? 1 : 0
       agent2Wins += response.ranks[0] === 1 ? 1 : 0
@@ -56,7 +61,8 @@ export class GameDataGeneratorService {
 
     for (let i = 0; i < count; i++) {
       cli.action.start(`Playing match ${i + 1} of ${count} against ${users[i].pseudo} | ${users[i].agentId}`)
-      const response: TestSessionPlayResponse = await this.apiService.getTestSessionPlayData({...this.options, agent2Id: users[i].agentId}) // eslint-disable-line no-await-in-loop
+      const response: TestSessionPlayResponse = await this.getPlayData(users[i].agentId) // eslint-disable-line no-await-in-loop
+      this.lastTimeOut = this.startingTimeOut
 
       const agent1HasWon: boolean = response.ranks[0] === 0
       agent1Wins += agent1HasWon ? 1 : 0
@@ -67,6 +73,21 @@ export class GameDataGeneratorService {
 
       cli.action.stop(`${agent1HasWon ? 'WIN' : 'LOSS'} | Wins: ${agent1Wins} (${percentage.format(agent1Percentage)}) | Margin of Error: ${percentage.format(marginOfError)}`)
       yield response
+    }
+  }
+
+  private async getPlayData(agentId: number): Promise<TestSessionPlayResponse> {
+    try {
+      return await this.apiService.getTestSessionPlayData({...this.options, agent2Id: agentId})
+    } catch (error) {
+      if (error instanceof ThrottlingError) {
+        this.lastTimeOut = this.lastTimeOut * 2
+        cli.action.start(`Reached limit, waiting for ${this.lastTimeOut / 1000}s`)
+        await cli.wait(this.lastTimeOut)
+        cli.action.stop('Retrying')
+        return this.getPlayData(agentId)
+      }
+      throw error
     }
   }
 }
