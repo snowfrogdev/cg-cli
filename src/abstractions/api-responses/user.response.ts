@@ -2,6 +2,7 @@ export interface UserResponse {
   pseudo?: string;
   rank?: number;
   localRank?: number;
+  total?: number;
   score?: number;
   testSessionHandle?: string;
   league?: {
@@ -27,6 +28,7 @@ export interface UserResponse {
   percentage?: number;
   agentId?: number;
   inProgress?: boolean;
+  company?: string;
   codingamer?: {
     userId?: number;
     pseudo?: string;
@@ -35,6 +37,7 @@ export interface UserResponse {
     avatar?: number;
     level?: number;
     category?: string;
+    onlineSince?: number;
   };
   percentageNoCache?: number;
 }

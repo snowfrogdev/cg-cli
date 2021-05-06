@@ -47,7 +47,8 @@ export class GameDataGeneratorService {
     progress.stop()
   }
 
-  public async * generateGameDataMulti(users: User[]) {
+  public async * generateGameDataMulti() {
+    const users = this.options.agent2
     const count = users.length
 
     const percentage = new Intl.NumberFormat('en-US', {style: 'percent'})

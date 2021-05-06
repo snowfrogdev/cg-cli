@@ -7,6 +7,7 @@ import {CGConfig, TestSessionPlayResponse, User, UserResponse} from '../abstract
 import {programmingLanguageChoices} from '../constants/programming-language-choices'
 import {CodinGameApiService} from '../services/codingame-api.service'
 import {GameDataGeneratorOptions, GameDataGeneratorService} from '../services/game-data-generator.service'
+import {InteractiveOpponentSearchService} from '../services/interactive-opponent-search.service'
 
 export class Run extends Command {
   static description = 'run test session playouts between two bots'
@@ -28,6 +29,7 @@ Writing simulation data... done`,
     agent2: flags.string({description: 'id of agent 2, a value of -1 means your own code, a value of -2 means the boss for the league'}),
     code: flags.string({char: 'c', description: 'path to the file containing the code to be submitted to CodinGame'}),
     config: flags.string({description: 'path to config file', default: './cgconfig.json'}),
+    interactive: flags.boolean({char: 'i', description: 'interactive menu to choose opponent(s) to agent 1', default: false, exclusive: ['agent2']}),
     language: flags.string({char: 'l', description: 'programming language of your bot source code', options: programmingLanguageChoices}),
     outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
@@ -55,7 +57,13 @@ Writing simulation data... done`,
 
     const code = await this.getCode(codePath)
 
-    const users: User[] = await this.getRequestedUsers(apiService, agent1Id, agent2Id, flags.top10)
+    let users: User[]
+    if (flags.interactive) {
+      const opponentSearchService = new InteractiveOpponentSearchService(apiService)
+      users = await opponentSearchService.getUserFromInteractive()
+    } else {
+      users = await this.getRequestedUsers(apiService, agent1Id, agent2Id, flags.top10)
+    }
 
     const options: GameDataGeneratorOptions = {cookie, code, programmingLanguageId, agent1Id, agent2: users}
     const gameDataIterator = await this.getGameDataIterator(apiService, options, count)
@@ -145,7 +153,7 @@ Writing simulation data... done`,
     const gameDataGeneratorService = new GameDataGeneratorService(apiService, options)
     let gameDataIterator: AsyncGenerator<TestSessionPlayResponse>
     if (options.agent2.length > 1) {
-      gameDataIterator = gameDataGeneratorService.generateGameDataMulti(options.agent2)
+      gameDataIterator = gameDataGeneratorService.generateGameDataMulti()
     } else {
       gameDataIterator = gameDataGeneratorService.generateGameData(count)
     }
@@ -197,15 +205,15 @@ interface RunCommandArgs {
 }
 
 interface RunCommandFlags {
-    help: void;
-    agent1: string | undefined;
-    agent2: string | undefined;
-    code: string | undefined;
-    config: string;
-    language: string | undefined;
-    outdir: string | undefined;
-    output: boolean;
+  help: void;
+  agent1: string | undefined;
+  agent2: string | undefined;
+  code: string | undefined;
+  config: string;
+  interactive: boolean;
+  language: string | undefined;
+  outdir: string | undefined;
+  output: boolean;
   puzzle: string | undefined;
   top10: boolean;
 }
-

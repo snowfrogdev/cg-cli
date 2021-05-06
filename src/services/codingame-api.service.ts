@@ -1,5 +1,5 @@
 import got from 'got'
-import {GetFilteredArenaDivisionRoomLeaderboardResponse, StartTestSessionResponse, TestSessionPlayOptions, TestSessionPlayResponse} from '../abstractions'
+import {GetFilteredArenaDivisionRoomLeaderboardResponse, StartTestSessionResponse, TestSessionPlayOptions, TestSessionPlayResponse, UserResponse} from '../abstractions'
 
 /* eslint-disable no-useless-constructor */
 export class CodinGameApiService {
@@ -7,16 +7,17 @@ export class CodinGameApiService {
 
   private constructor(
     private readonly cookie: string,
-    private readonly userId: number,
     private readonly testSessionId: string,
+    private readonly publicHandle: string,
     private readonly divisionId: number,
     private readonly roomIndex: number
   ) { }
 
   static async build(cookie: string, userId: number, puzzleName: string): Promise<CodinGameApiService> {
     const testSessionId = await this.getSessionId(cookie, userId, puzzleName)
+    const publicHandle = await this.getPublicHandle(cookie, testSessionId)
     const {divisionId, roomIndex} = await this.getDivisionIdAndRoomIndex(cookie, testSessionId)
-    return new CodinGameApiService(cookie, userId, testSessionId, divisionId, roomIndex)
+    return new CodinGameApiService(cookie, testSessionId, publicHandle, divisionId, roomIndex)
   }
 
   private static async getSessionId(cookie: string, userId: number, puzzleName: string): Promise<string> {
@@ -32,6 +33,22 @@ export class CodinGameApiService {
     } catch (error) {
       const message = error.response ? error.response.body.message : error.message
       throw new Error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. ${message}`)
+    }
+  }
+
+  private static async getPublicHandle(cookie: string, testSessionId: string): Promise<string> {
+    try {
+      const response = await got.post<UserResponse>(`${CodinGameApiService.baseUrl}/Leaderboards/getUserArenaDivisionRoomRankingByTestSessionHandle`, {
+        headers: {
+          cookie,
+        },
+        json: [testSessionId, 'global'],
+        responseType: 'json',
+      })
+      return response.body?.codingamer?.publicHandle!
+    } catch (error) {
+      const message = error.response ? error.response.body.message : error.message
+      throw new Error(`There was a problem fetching your public handle from CodinGame. ${message}`)
     }
   }
 
@@ -58,7 +75,7 @@ export class CodinGameApiService {
         headers: {
           cookie: this.cookie,
         },
-        json: [{divisionId: this.divisionId, roomIndex: this.roomIndex}, this.testSessionId, null, {active: true, column: options?.column ?? 'CODINGAMER', filter: options?.filter ?? 'ALL'}],
+        json: [{divisionId: this.divisionId, roomIndex: this.roomIndex}, this.publicHandle, null, {active: options?.active, column: options?.column ?? 'CODINGAMER', filter: options?.filter ?? 'ALL'}],
         responseType: 'json',
       })
       return response.body
@@ -96,8 +113,9 @@ export class CodinGameApiService {
 }
 
 export interface GetFilteredArenaDivisionRoomLeaderboardOptions {
+  active: boolean;
   column: LeaderBoardFilterColumn;
-  filter: LeaderBoardCountryFilterOption | LeaderBoardScoreFilterOption | LeaderBoardCodinGamerFilterOption | LeaderBoardLanguageFilterOption;
+  filter: LeaderBoardCountryFilterOption | LeaderBoardScoreFilterOption | LeaderBoardCodinGamerFilterOption | LeaderBoardLanguageFilterOption | string;
 }
 
 type LeaderBoardFilterColumn = 'CODINGAMER' | 'LANGUAGE' | 'SCORE' | 'COUNTRY' | 'KEYWORD'
