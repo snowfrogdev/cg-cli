@@ -9,18 +9,18 @@ import {CodinGameApiService} from '../services/codingame-api.service'
 import {GameDataGeneratorOptions, GameDataGeneratorService} from '../services/game-data-generator.service'
 import {InteractiveOpponentSearchService} from '../services/interactive-opponent-search.service'
 
-export class Run extends Command {
-  static description = 'run test session playouts between two bots'
+export class Play extends Command {
+  static description = 'play test session playouts between two bots'
 
   static examples = [
-    `$ cg run 10 -o
+    `$ cg play 10 -o
 Reading config file... done
 Validating inputs... done
 Fetching test session id from CodinGame... done
 Grabbing source code... done
-Running simulations...
+Playing games...
  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of Error: 32%
-Writing simulation data... done`,
+Writing game data... done`,
   ]
 
   static flags = {
@@ -31,17 +31,17 @@ Writing simulation data... done`,
     config: flags.string({description: 'path to config file', default: './cgconfig.json'}),
     interactive: flags.boolean({char: 'i', description: 'interactive menu to choose opponent(s) to agent 1', default: false, exclusive: ['agent2']}),
     language: flags.string({char: 'l', description: 'programming language of your bot source code', options: programmingLanguageChoices}),
-    outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', dependsOn: ['output']}),
+    outdir: flags.string({description: 'directory in which to place the output data from simulation playthroughs, created if doesn\'t exist', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),
     replay: flags.boolean({char: 'r', description: 'use the same game conditions as the last game.', default: false}),
     top10: flags.boolean({description: 'play agent1 against the top 10 bots in the league', default: false, exclusive: ['agent2']}),
   }
 
-  static args = [{name: 'count', description: 'the number of simulations to run on the server. Must be bigger than 0', default: 1}]
+  static args = [{name: 'count', description: 'the number of games to play on the server. Must be bigger than 0', default: 1}]
 
   async run() {
-    const {args, flags}: { args: RunCommandArgs; flags: RunCommandFlags } = this.parse(Run)
+    const {args, flags}: { args: PlayCommandArgs; flags: PlayCommandFlags } = this.parse(Play)
 
     const config = await this.getConfig(flags.config)
 
@@ -85,7 +85,7 @@ Writing simulation data... done`,
     return config
   }
 
-  private validateInputs(flags: RunCommandFlags, config: CGConfig, args: RunCommandArgs) {
+  private validateInputs(flags: PlayCommandFlags, config: CGConfig, args: PlayCommandArgs) {
     cli.action.start('Validating inputs')
     const count = Number(args.count)
     if (isNaN(count) || count < 1) {
@@ -162,7 +162,7 @@ Writing simulation data... done`,
   }
 
   private async getGameDataIterator(apiService: CodinGameApiService, options: GameDataGeneratorOptions, count: number) {
-    this.log('Running simulations...')
+    this.log('Playing games...')
     const gameDataGeneratorService = new GameDataGeneratorService(apiService, options)
     let gameDataIterator: AsyncGenerator<TestSessionPlayResponse>
     if (options.agent2.length > 1) {
@@ -216,18 +216,18 @@ Writing simulation data... done`,
     this.log('Simulations done.')
 
     if (writeOperations.length > 0) {
-      cli.action.start('Writing simulation data')
+      cli.action.start('Writing game data')
       await Promise.all(writeOperations)
       cli.action.stop()
     }
   }
 }
 
-interface RunCommandArgs {
+interface PlayCommandArgs {
   count: string;
 }
 
-interface RunCommandFlags {
+interface PlayCommandFlags {
   help: void;
   agent1: string | undefined;
   agent2: string | undefined;
