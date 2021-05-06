@@ -1,7 +1,7 @@
 import {Command, flags} from '@oclif/command'
 import {cli} from 'cli-ux'
-import {pathExists, readFile, readJson, writeFile} from 'fs-extra'
-import {basename, resolve} from 'path'
+import {ensureDir, pathExists, readFile, readJson, writeFile} from 'fs-extra'
+import {basename, dirname, resolve} from 'path'
 import {CGConfig} from '../abstractions'
 import {programmingLanguageChoices} from '../constants/programming-language-choices'
 import klaw = require('klaw');
@@ -26,7 +26,7 @@ export default class Bundle extends Command {
     const sourcePath = flags.source ?? config.sourcePath!
     const codePath = flags.code ?? config.codePath!
 
-    cli.action.start(`Bundling your ${programmingLanguageId} source code located in ${sourcePath}`)
+    cli.action.start(`Bundling your ${programmingLanguageId} source code located in ${resolve(sourcePath)}`)
     switch (programmingLanguageId) {
     case 'C#': await bundleCSharp(sourcePath, codePath)
       break
@@ -78,7 +78,9 @@ async function bundleCSharp(sourcePath: string, bundledFilePath: string): Promis
   const nameSpaceRegex = /\bnamespace\s+(\S+)[\s\n\r]+{([\s\S]+)}/
   const usingRegex = /\busing\s+(?:static\s+)?([\w\.]+);/g
 
-  const paths = await getFilePathsByExtension(sourcePath, ['bin', 'obj'], '.cs')
+  const bundleDir = bundledFilePath.match(/.+\/(.+)\/.+\..+/)![1]
+
+  const paths = await getFilePathsByExtension(sourcePath, ['bin', 'obj', bundleDir], '.cs')
 
   for (const path of paths) {
     let code = (await readFile(resolve(path), 'utf8')) // eslint-disable-line no-await-in-loop
@@ -99,6 +101,7 @@ async function bundleCSharp(sourcePath: string, bundledFilePath: string): Promis
   })
 
   try {
+    await ensureDir(dirname(resolve(bundledFilePath)))
     await writeFile(resolve(bundledFilePath), output, 'utf8')
   } catch (error) {
     throw new Error(`There was a problem trying to write to ${bundledFilePath}. ${error.message}`)
