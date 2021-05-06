@@ -1,6 +1,6 @@
 import {Command, flags} from '@oclif/command'
 import cli from 'cli-ux'
-import {outputJson, pathExists, readFile, readJson, writeFile} from 'fs-extra'
+import {ensureDir, outputJson, pathExists, readFile, readJson, writeFile} from 'fs-extra'
 import * as notifier from 'node-notifier'
 import {resolve} from 'path'
 import {CGConfig, TestSessionPlayResponse, User, UserResponse} from '../abstractions'
@@ -210,7 +210,8 @@ Writing game data... done`,
         writeOperations.push(outputJson(resolve(path), gameData))
       }
 
-      writeFile(resolve(outdir + '/cached-game-options.txt'), gameData.refereeInput)
+      await ensureDir(resolve(outdir))
+      await writeFile(resolve(outdir + '/cached-game-options.txt'), gameData.refereeInput)
 
       i++
     }
