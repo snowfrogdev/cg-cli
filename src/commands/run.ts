@@ -142,7 +142,7 @@ Writing simulation data... done`,
     if (hasTop10) {
       users = top10
     } else {
-      agent2Id = agent2Id.map(agentId => agentId === -2 ? bossId! : agent1Id) // being a bad boy here, should remove ! and validate
+      agent2Id = agent2Id.map(agentId => agentId === -2 ? bossId! : agentId) // being a bad boy here, should remove ! and validate
       users = await this.getUsersByAgentId(api, agent2Id)
     }
     return users.map(user => ({agentId: user.agentId!, pseudo: user.pseudo!})) // being a bad boy here, should remove ! and validate
@@ -175,7 +175,14 @@ Writing simulation data... done`,
     if (!users) {
       throw new Error('Could not fetch users from CondinGame servers.')
     }
-    return users.filter(user => agentIds.includes(user.agentId!)).map(user => ({agentId: user.agentId!, pseudo: user.pseudo!})) // being a bad boy here, should remove ! and validate
+
+    const result: User[] = []
+    for (const agentId of agentIds) {
+      const user = users.find(user => user.agentId === agentId)
+      result.push({agentId, pseudo: user?.pseudo ?? ' - '})
+    }
+
+    return result
   }
 
   private async processGameData(gameDataIterator: AsyncGenerator<TestSessionPlayResponse, void, unknown>, output: boolean, outdir: string) {
