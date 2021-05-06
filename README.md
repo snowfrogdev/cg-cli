@@ -21,7 +21,7 @@ $ npm install -g @snowfrog/cg-cli
 $ cg COMMAND
 running command...
 $ cg (-v|--version|version)
-@snowfrog/cg-cli/0.6.0 win32-x64 node-v14.16.1
+@snowfrog/cg-cli/0.7.0 win32-x64 node-v14.16.1
 $ cg --help [COMMAND]
 USAGE
   $ cg COMMAND
@@ -35,7 +35,7 @@ USAGE
 * [`cg bundle`](#cg-bundle)
 * [`cg help [COMMAND]`](#cg-help-command)
 * [`cg init`](#cg-init)
-* [`cg run [COUNT]`](#cg-run-count)
+* [`cg play [COUNT]`](#cg-play-count)
 
 ## `cg autocomplete [SHELL]`
 
@@ -87,7 +87,7 @@ OPTIONS
       [default: ./cgconfig.json] path to config file
 ```
 
-_See code: [src/commands/bundle.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.6.0/src/commands/bundle.ts)_
+_See code: [src/commands/bundle.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.7.0/src/commands/bundle.ts)_
 
 ## `cg help [COMMAND]`
 
@@ -118,18 +118,18 @@ OPTIONS
   -h, --help  show CLI help
 ```
 
-_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.6.0/src/commands/init.ts)_
+_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.7.0/src/commands/init.ts)_
 
-## `cg run [COUNT]`
+## `cg play [COUNT]`
 
-run test session playouts between two bots
+play test session playouts between two bots
 
 ```
 USAGE
-  $ cg run [COUNT]
+  $ cg play [COUNT]
 
 ARGUMENTS
-  COUNT  [default: 1] the number of simulations to run on the server. Must be bigger than 0
+  COUNT  [default: 1] the number of games to play on the server. Must be bigger than 0
 
 OPTIONS
   -c, --code=code
@@ -165,22 +165,22 @@ OPTIONS
       [default: ./cgconfig.json] path to config file
 
   --outdir=outdir
-      directory in which to place the output data from simulation runs, created if doesn't exist
+      directory in which to place the output data from simulation playthroughs, created if doesn't exist
 
   --top10
       play agent1 against the top 10 bots in the league
 
 EXAMPLE
-  $ cg run 10 -o
+  $ cg play 10 -o
   Reading config file... done
   Validating inputs... done
   Fetching test session id from CodinGame... done
   Grabbing source code... done
-  Running simulations...
+  Playing games...
     ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ ETA: 0s | 10/10 | Agent1: 5 wins (50%) | Agent2: 5 wins (50%) | Margin of 
   Error: 32%
-  Writing simulation data... done
+  Writing game data... done
 ```
 
-_See code: [src/commands/run.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.6.0/src/commands/run.ts)_
+_See code: [src/commands/play.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.7.0/src/commands/play.ts)_
 <!-- commandsstop -->
