@@ -77,4 +77,5 @@ export interface GameDataGeneratorOptions {
   programmingLanguageId: string;
   agent1Id: number;
   agent2: User[];
+  gameOptions: string | null;
 }

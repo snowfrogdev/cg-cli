@@ -3,4 +3,5 @@ export interface TestSessionPlayOptions {
   programmingLanguageId: string;
   agent1Id: number;
   agent2Id: number;
+  gameOptions: string | null;
 }

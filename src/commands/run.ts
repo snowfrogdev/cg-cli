@@ -1,6 +1,6 @@
 import {Command, flags} from '@oclif/command'
 import cli from 'cli-ux'
-import {outputJson, pathExists, readFile, readJson} from 'fs-extra'
+import {outputJson, pathExists, readFile, readJson, writeFile} from 'fs-extra'
 import * as notifier from 'node-notifier'
 import {resolve} from 'path'
 import {CGConfig, TestSessionPlayResponse, User, UserResponse} from '../abstractions'
@@ -34,6 +34,7 @@ Writing simulation data... done`,
     outdir: flags.string({description: 'directory in which to place the output data from simulation runs, created if doesn\'t exist', dependsOn: ['output']}),
     output: flags.boolean({char: 'o', description: 'whether or not to output simulation data to file', default: false}),
     puzzle: flags.string({char: 'p', description: 'name of puzzle or contest used by CodinGame API'}),
+    replay: flags.boolean({char: 'r', description: 'use the same game conditions as the last game.', default: false}),
     top10: flags.boolean({description: 'play agent1 against the top 10 bots in the league', default: false, exclusive: ['agent2']}),
   }
 
@@ -55,6 +56,7 @@ Writing simulation data... done`,
     const count = Number(args.count)
     const apiService = await CodinGameApiService.build(cookie, config.userId!, puzzleName)
 
+    const gameOptions = flags.replay ? await this.getGameOptions(outdir) : null
     const code = await this.getCode(codePath)
 
     let users: User[]
@@ -65,7 +67,7 @@ Writing simulation data... done`,
       users = await this.getRequestedUsers(apiService, agent1Id, agent2Id, flags.top10)
     }
 
-    const options: GameDataGeneratorOptions = {cookie, code, programmingLanguageId, agent1Id, agent2: users}
+    const options: GameDataGeneratorOptions = {cookie, code, programmingLanguageId, agent1Id, agent2: users, gameOptions}
     const gameDataIterator = await this.getGameDataIterator(apiService, options, count)
 
     await this.processGameData(gameDataIterator, flags.output, outdir)
@@ -122,6 +124,17 @@ Writing simulation data... done`,
       this.error('No code path was specified. Please add \'codePath\' property to config file or use --code flag.', {exit: 1})
     }
     cli.action.stop()
+  }
+
+  private async getGameOptions(path: string) {
+    cli.action.start('Grabbing cached gameOptions')
+    try {
+      const gameOptions = (await readFile(resolve(path + '/cached-game-options.txt'), 'utf8')).trim()
+      cli.action.stop()
+      return gameOptions
+    } catch (error) {
+      this.error(`There was a problem trying to read gameOptions from ${path} + '/cached-game-options.txt'. ${error.message}`, {exit: 1})
+    }
   }
 
   private async getCode(codePath: string) {
@@ -193,8 +206,11 @@ Writing simulation data... done`,
     for await (const gameData of gameDataIterator) {
       if (output) {
         const path = outdir + `/${dateStamp}-${i}.json`
-        writeOperations.push(outputJson(path, gameData))
+        writeOperations.push(outputJson(resolve(path), gameData))
       }
+
+      writeFile(resolve(outdir + '/cached-game-options.txt'), gameData.refereeInput)
+
       i++
     }
     this.log('Simulations done.')
@@ -222,5 +238,6 @@ interface RunCommandFlags {
   outdir: string | undefined;
   output: boolean;
   puzzle: string | undefined;
+  replay: boolean;
   top10: boolean;
 }

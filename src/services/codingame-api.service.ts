@@ -98,7 +98,7 @@ export class CodinGameApiService {
             programmingLanguageId: options.programmingLanguageId,
             multi: {
               agentsIds: [options.agent1Id, options.agent2Id],
-              gameOptions: null,
+              gameOptions: options.gameOptions,
             },
           },
         ],
