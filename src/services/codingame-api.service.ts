@@ -31,7 +31,26 @@ export class CodinGameApiService {
         json: [userId, puzzleName, false],
         responseType: 'json',
       })
+      if (response.body === null) {
+        return this.getSessionIdForChallenge(cookie, userId, puzzleName) // TODO: This is a hack, need to clean that up
+      }
       return response.body.handle
+    } catch (error) {
+      const message = error.response ? error.response.body.message : error.message
+      throw new Error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. ${message}`)
+    }
+  }
+
+  private static async getSessionIdForChallenge(cookie: string, userId: number, puzzleName: string): Promise<string> {
+    try {
+      const response = await got.post<{ testSessionHandle: string }>(`${this.baseUrl}/ChallengeCandidate/findChallengerByChallenge`, {
+        headers: {
+          cookie,
+        },
+        json: [puzzleName, userId],
+        responseType: 'json',
+      })
+      return response.body.testSessionHandle
     } catch (error) {
       const message = error.response ? error.response.body.message : error.message
       throw new Error(`There was a problem fetching a Test Session handle from CodinGame for puzzle ${puzzleName}. ${message}`)
