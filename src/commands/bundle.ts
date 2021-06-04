@@ -25,10 +25,11 @@ export default class Bundle extends Command {
     const programmingLanguageId = flags.language ?? config.programmingLanguageId!
     const sourcePath = flags.source ?? config.sourcePath!
     const codePath = flags.code ?? config.codePath!
+    const excludeDirs = config.excludeDirs
 
     cli.action.start(`Bundling your ${programmingLanguageId} source code located in ${resolve(sourcePath)}`)
     switch (programmingLanguageId) {
-    case 'C#': await bundleCSharp(sourcePath, codePath)
+    case 'C#': await bundleCSharp(sourcePath, codePath, excludeDirs)
       break
     default: this.error(`Unfortunately bundling is not yet supported for ${programmingLanguageId}`)
     }
@@ -71,7 +72,7 @@ interface BundleCommandFlags {
     source: string | undefined;
 }
 
-async function bundleCSharp(sourcePath: string, bundledFilePath: string): Promise<void> {
+async function bundleCSharp(sourcePath: string, bundledFilePath: string, excludeDirs: string[] = []): Promise<void> {
   let output = ''
   const allUsings = new Map<string, string>()
   const allNamespaces = new Set<string>()
@@ -80,7 +81,7 @@ async function bundleCSharp(sourcePath: string, bundledFilePath: string): Promis
 
   const bundleDir = bundledFilePath.match(/.+\/(.+)\/.+\..+/)![1]
 
-  const paths = await getFilePathsByExtension(sourcePath, ['bin', 'obj', bundleDir], '.cs')
+  const paths = await getFilePathsByExtension(sourcePath, ['bin', 'obj', bundleDir, ...excludeDirs], '.cs')
 
   for (const path of paths) {
     let code = (await readFile(resolve(path), 'utf8')) // eslint-disable-line no-await-in-loop

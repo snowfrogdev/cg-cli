@@ -27,7 +27,7 @@ export default class Init extends Command {
 
     const contestChoices = await this.getContests(`rememberMe=${cookie}`, userId)
 
-    const {puzzleName, programmingLanguageId, codePath, sourcePath} = await inquirer.prompt<{ puzzleName: string; programmingLanguageId: string; codePath: string; sourcePath: string}>([
+    const {puzzleName, programmingLanguageId, codePath, sourcePath, excluded} = await inquirer.prompt<{ puzzleName: string; programmingLanguageId: string; codePath: string; sourcePath: string; excluded: string}>([
       {
         name: 'puzzleName',
         message: 'What puzzle are you working on',
@@ -50,10 +50,16 @@ export default class Init extends Command {
         name: 'sourcePath',
         message: 'What is the relative path of the folder containing your source code to be bundled',
       },
+      {
+        name: 'excluded',
+        message: 'What are the directories you want excluded from the bundle? (comma separated if more than one)',
+      },
 
     ])
 
-    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId, codePath, sourcePath, agent1: -1, agent2: [-2]}
+    const excludeDirs: string[] = excluded.split(',').map(dir => dir.trim())
+
+    const config: CGConfig = {cookie, userId, puzzleName, programmingLanguageId, codePath, sourcePath, excludeDirs, agent1: -1, agent2: [-2]}
 
     this.saveConfig(config)
 

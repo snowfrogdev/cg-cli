@@ -4,6 +4,7 @@ export interface CGConfig {
   puzzleName?: string;
   codePath?: string;
   sourcePath?: string;
+  excludeDirs?: string[];
   programmingLanguageId?: string;
   /**
    * The agent id for the first agent.

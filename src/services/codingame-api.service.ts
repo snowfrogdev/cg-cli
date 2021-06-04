@@ -131,7 +131,7 @@ export class CodinGameApiService {
         throw new ThrottlingError(error.response.body.message)
       }
       const message = error.response ? error.response.body.message : error.message
-      throw new Error(`There was a problem running your simulations. ${message}`)
+      throw new Error(`There was a problem while trying to play your game. ${message}`)
     }
   }
 }
