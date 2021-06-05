@@ -21,7 +21,7 @@ $ npm install -g @snowfrog/cg-cli
 $ cg COMMAND
 running command...
 $ cg (-v|--version|version)
-@snowfrog/cg-cli/0.9.0 win32-x64 node-v14.16.1
+@snowfrog/cg-cli/0.9.1 win32-x64 node-v14.16.1
 $ cg --help [COMMAND]
 USAGE
   $ cg COMMAND
@@ -87,7 +87,7 @@ OPTIONS
       [default: ./cgconfig.json] path to config file
 ```
 
-_See code: [src/commands/bundle.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.9.0/src/commands/bundle.ts)_
+_See code: [src/commands/bundle.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.9.1/src/commands/bundle.ts)_
 
 ## `cg help [COMMAND]`
 
@@ -118,7 +118,7 @@ OPTIONS
   -h, --help  show CLI help
 ```
 
-_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.9.0/src/commands/init.ts)_
+_See code: [src/commands/init.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.9.1/src/commands/init.ts)_
 
 ## `cg play [COUNT]`
 
@@ -182,5 +182,5 @@ EXAMPLE
   Writing game data... done
 ```
 
-_See code: [src/commands/play.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.9.0/src/commands/play.ts)_
+_See code: [src/commands/play.ts](https://github.com/snowfrogdev/cg-cli/blob/v0.9.1/src/commands/play.ts)_
 <!-- commandsstop -->
