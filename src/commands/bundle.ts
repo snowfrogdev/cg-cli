@@ -77,7 +77,7 @@ async function bundleCSharp(sourcePath: string, bundledFilePath: string, exclude
   const allUsings = new Map<string, string>()
   const allNamespaces = new Set<string>()
   const nameSpaceRegex = /\bnamespace\s+(\S+)[\s\n\r]+{([\s\S]+)}/
-  const usingRegex = /\busing\s+(?:static\s+)?([\w\.]+);/g
+  const usingRegex = /\busing\s+(?:static\s+)?([\w\.]+)(?:\s*=\s*)?(?:[\w\.]+)?;/g
 
   const bundleDir = bundledFilePath.match(/.+\/(.+)\/.+\..+/)![1]
 
